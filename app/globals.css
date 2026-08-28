@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ============================================================
+       Paleta "Grafito y Champagne" — tokens centralizados.
+       Cada valor de la paleta se define UNA sola vez aquí (formato
+       "H S% L%" para permitir opacidades de Tailwind).
+       ============================================================ */
+    --c-grafito: 218 11% 20%; /* #2D3138 */
+    --c-champagne: 41 39% 55%; /* #B89B5E */
+    --c-perla: 43 41% 97%; /* #FAF8F3 */
+    --c-acero: 198 20% 45%; /* #5C7C8A */
+    --c-bosque: 154 33% 37%; /* #3F7D62 */
+    --c-ambar: 36 57% 49%; /* #C58C36 */
+    --c-taupe: 40 5% 44%; /* #77736B */
+    --c-borde: 38 26% 88%; /* #E8E2D8 */
+    --c-hover: 40 41% 93%; /* #F4EFE5 */
+    --c-rojo: 355 32% 46%; /* #9B4F55 */
+    --c-champagne-tenue: 41 47% 90%; /* tinte claro de acento/hover */
+
+    /* --- Mapeo a los tokens de la interfaz (shadcn/ui) --- */
+    --background: var(--c-perla);
+    --foreground: var(--c-grafito);
+
+    --card: 0 0% 100%;
+    --card-foreground: var(--c-grafito);
+
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--c-grafito);
+
+    /* Grafito: título, texto principal, botón "Agregar empresa", encabezados */
+    --primary: var(--c-grafito);
+    --primary-foreground: 0 0% 100%;
+
+    /* Botones secundarios: fondo blanco + borde cálido + texto grafito */
+    --secondary: 0 0% 100%;
+    --secondary-foreground: var(--c-grafito);
+
+    --muted: var(--c-hover);
+    --muted-foreground: var(--c-taupe);
+
+    /* Acento champagne muy suave (fondo de tarjeta seleccionada / hover) */
+    --accent: var(--c-champagne-tenue);
+    --accent-foreground: var(--c-grafito);
+
+    /* Rojo apagado: errores, pérdidas, fechas vencidas */
+    --destructive: var(--c-rojo);
+    --destructive-foreground: 0 0% 100%;
+
+    --border: var(--c-borde);
+    --input: var(--c-borde);
+    /* Champagne: focus rings, bordes/indicadores activos, acentos pequeños */
+    --ring: var(--c-champagne);
+
+    --radius: 0.65rem;
+
+    /* ============================================================
+       Colores semánticos (estados y seguimiento)
+       ============================================================ */
+    --champagne: var(--c-champagne);
+
+    /* Colores principales de estado (deben distinguirse claramente entre sí).
+       Cerrada - Ganada / Cerrada - No concretada NO cambian. */
+    --estado-pendiente: 215 16% 47%; /* #64748B gris pizarra */
+    --estado-platicas: 32 95% 44%; /* #D97706 ámbar */
+    --estado-avance: 221 83% 53%; /* #2563EB azul real */
+    --estado-futura: 262 83% 58%; /* #7C3AED morado */
+    --estado-ganada: var(--c-bosque); /* verde bosque (sin cambios) */
+    --estado-perdida: var(--c-rojo); /* rojo apagado (sin cambios) */
+
+    /* Fondos y bordes suaves (etiquetas, tarjetas, opción seleccionada) */
+    --estado-pendiente-suave: 210 40% 96%; /* #F1F5F9 */
+    --estado-pendiente-borde: 213 27% 84%; /* #CBD5E1 */
+    --estado-platicas-suave: 33 100% 96%; /* #FFF7ED */
+    --estado-platicas-borde: 32 98% 83%; /* #FED7AA */
+    --estado-avance-suave: 214 100% 97%; /* #EFF6FF */
+    --estado-avance-borde: 213 97% 87%; /* #BFDBFE */
+    --estado-futura-suave: 250 100% 98%; /* #F5F3FF */
+    --estado-futura-borde: 251 95% 92%; /* #DDD6FE */
+
+    /* Variantes oscurecidas solo para texto de toast (no para las etiquetas) */
+    --estado-pendiente-fg: 215 22% 34%;
+    --estado-platicas-fg: 28 92% 33%;
+    --estado-avance-fg: 221 74% 42%;
+    --estado-futura-fg: 262 66% 46%;
+    --estado-ganada-fg: 154 36% 25%;
+    --estado-perdida-fg: 356 34% 36%;
+
+    --seguimiento: var(--c-acero); /* etiquetas / iconos de próximo seguimiento */
+    --exito: var(--c-bosque); /* checkmarks completados, confirmaciones */
+    --alerta: var(--c-ambar); /* fechas próximas, alertas preventivas */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Barra de scroll discreta */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+}
+
+/* Notificaciones (sonner) en la paleta */
+[data-sonner-toaster] {
+  --success-bg: hsl(154 33% 96%);
+  --success-border: hsl(154 30% 80%);
+  --success-text: hsl(var(--estado-ganada-fg));
+  --error-bg: hsl(355 40% 96%);
+  --error-border: hsl(355 32% 82%);
+  --error-text: hsl(var(--estado-perdida-fg));
+  --warning-bg: hsl(36 55% 96%);
+  --warning-border: hsl(36 50% 80%);
+  --warning-text: hsl(var(--estado-platicas-fg));
+  --info-bg: hsl(198 30% 96%);
+  --info-border: hsl(198 24% 80%);
+  --info-text: hsl(var(--estado-avance-fg));
+}
