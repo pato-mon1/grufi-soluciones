@@ -5,14 +5,16 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
-  // Validación de sesión en el servidor (defensa adicional al middleware):
-  // sin Supabase se usa el modo local y no se exige inicio de sesión.
+  // Comprobación de sesión en el servidor (comodidad de UI; la seguridad real
+  // la dan las RLS de la base de datos). Se usa `getSession()` — lee la cookie,
+  // sin la llamada de red pesada de `getUser()`.
+  // Sin Supabase se usa el modo local y no se exige inicio de sesión.
   if (isSupabaseConfigured()) {
     const supabase = createSupabaseServerClient();
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       redirect("/login");
     }
   }

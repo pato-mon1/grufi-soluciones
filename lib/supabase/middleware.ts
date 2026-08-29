@@ -10,12 +10,16 @@ import {
 const RUTAS_PUBLICAS = ["/login"];
 
 /**
- * Refresca la sesión de Supabase en cada petición (patrón recomendado para
- * Next.js App Router + `@supabase/ssr`) y protege el CRM:
+ * Protege el CRM y mantiene la cookie de sesión al día.
  *
- *  - Sin Supabase configurado -> modo local, no se exige inicio de sesión.
- *  - Sin sesión y ruta protegida -> redirige a `/login`.
- *  - Con sesión y ruta `/login` -> redirige al dashboard.
+ * Para no saturar el servicio de Auth de Supabase (puede ser lento en el plan
+ * gratuito), solo actúa en navegaciones reales de página. Las subpeticiones
+ * internas de Next (RSC, prefetch, fetch) pasan directo: la página Server
+ * Component y el cliente ya validan la sesión, y las RLS de la base de datos
+ * son la barrera de seguridad real.
+ *
+ * Usa `getSession()` (lee y refresca la cookie) en vez de `getUser()` (que
+ * hace una llamada de red que valida el JWT en cada invocación).
  */
 export async function updateSession(
   request: NextRequest,
@@ -24,6 +28,12 @@ export async function updateSession(
 
   // Modo local: sin autenticación.
   if (!isSupabaseConfigured()) {
+    return response;
+  }
+
+  // Solo las navegaciones de documento pasan por la verificación completa.
+  const destino = request.headers.get("sec-fetch-dest");
+  if (destino && destino !== "document") {
     return response;
   }
 
@@ -44,25 +54,23 @@ export async function updateSession(
     },
   });
 
-  // `getUser()` valida el JWT contra el servidor de Supabase (no confía solo
-  // en la cookie) y, de paso, refresca el token si hace falta.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const { pathname } = request.nextUrl;
   const esRutaPublica = RUTAS_PUBLICAS.some(
     (ruta) => pathname === ruta || pathname.startsWith(`${ruta}/`),
   );
 
-  if (!user && !esRutaPublica) {
+  if (!session && !esRutaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  if (user && esRutaPublica) {
+  if (session && esRutaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

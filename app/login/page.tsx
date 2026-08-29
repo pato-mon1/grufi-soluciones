@@ -15,11 +15,12 @@ export default async function LoginPage() {
   }
 
   // Si ya hay sesión, no mostrar el formulario: ir al dashboard.
+  // `getSession()` lee la cookie (sin llamada de red pesada).
   const supabase = createSupabaseServerClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session) {
     redirect("/");
   }
 
