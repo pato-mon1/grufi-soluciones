@@ -174,8 +174,10 @@ export function EmpresasProvider({ children }: { children: React.ReactNode }) {
     const sb = getSupabaseClient();
     let cancelado = false;
 
-    sb.auth.getUser().then(({ data }) => {
-      if (!cancelado) setUsuario(data.user?.email ?? null);
+    // getSession() lee la sesión guardada (sin red); la validación real ya la
+    // hizo el middleware. Evita una llamada lenta a /auth/v1/user al cargar.
+    sb.auth.getSession().then(({ data }) => {
+      if (!cancelado) setUsuario(data.session?.user?.email ?? null);
     });
 
     const { data: sub } = sb.auth.onAuthStateChange((evento, session) => {

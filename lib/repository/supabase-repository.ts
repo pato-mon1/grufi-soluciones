@@ -128,11 +128,9 @@ function aActividad(f: FilaActividad): Actividad {
   };
 }
 
-async function usuarioId(): Promise<string> {
-  const u = await getUsuarioActual();
-  if (!u) throw new Error("Debes iniciar sesión para guardar cambios.");
-  return u.id;
-}
+// El `user_id` de cada fila lo pone la base de datos con `default auth.uid()`
+// (ver supabase/schema.sql); por eso los INSERT ya no lo envían ni consultan
+// el usuario en cada operación.
 
 // ── Repositorio ─────────────────────────────────────────────
 
@@ -155,10 +153,9 @@ class SupabaseRepository implements EmpresaRepository {
   }
 
   async create(input: EmpresaInput): Promise<Empresa> {
-    const user_id = await usuarioId();
     const { data, error } = await this.sb
       .from(SUPABASE_TABLE)
-      .insert({ ...empresaAFila(input), user_id })
+      .insert(empresaAFila(input))
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -167,10 +164,9 @@ class SupabaseRepository implements EmpresaRepository {
 
   async bulkCreate(inputs: EmpresaInput[]): Promise<Empresa[]> {
     if (inputs.length === 0) return [];
-    const user_id = await usuarioId();
     const { data, error } = await this.sb
       .from(SUPABASE_TABLE)
-      .insert(inputs.map((i) => ({ ...empresaAFila(i), user_id })))
+      .insert(inputs.map((i) => empresaAFila(i)))
       .select();
     if (error) throw new Error(error.message);
     return (data as FilaEmpresa[]).map(aEmpresa);
@@ -208,11 +204,10 @@ class SupabaseRepository implements EmpresaRepository {
     empresaId: string,
     input: ContactoInput,
   ): Promise<Contacto> {
-    const user_id = await usuarioId();
     if (input.principal) await this.desmarcarPrincipales(empresaId);
     const { data, error } = await this.sb
       .from(SUPABASE_TABLE_CONTACTOS)
-      .insert({ ...contactoAFila(input), empresa_id: empresaId, user_id })
+      .insert({ ...contactoAFila(input), empresa_id: empresaId })
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -278,7 +273,6 @@ class SupabaseRepository implements EmpresaRepository {
 
   async crearActividad(input: NuevaActividad): Promise<Actividad> {
     const u = await getUsuarioActual();
-    if (!u) throw new Error("Debes iniciar sesión para registrar actividades.");
     const { data, error } = await this.sb
       .from(SUPABASE_TABLE_ACTIVIDADES)
       .insert({
@@ -286,8 +280,7 @@ class SupabaseRepository implements EmpresaRepository {
         tipo: input.tipo,
         fecha_hora: input.fechaHora,
         descripcion: input.descripcion.trim(),
-        usuario: u.email,
-        user_id: u.id,
+        usuario: u?.email ?? "",
       })
       .select()
       .single();
