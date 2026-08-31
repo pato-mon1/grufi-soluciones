@@ -20,12 +20,20 @@ interface EstadoEquipo {
   invitaciones: Invitacion[];
   miUserId: string | null;
   soyAdmin: boolean;
+  /** `true` si el servidor tiene configurada la clave para dar de alta cuentas. */
+  altaDisponible: boolean;
   recargar: () => Promise<void>;
   renombrar: (nombre: string) => Promise<void>;
   invitar: (correo: string, rol: RolPerfil) => Promise<void>;
   cancelarInvitacion: (id: string) => Promise<void>;
   cambiarRol: (miembroId: string, rol: RolPerfil) => Promise<void>;
   quitarMiembro: (miembroId: string) => Promise<void>;
+  /** Crea (o vincula) una cuenta y la añade a la organización. */
+  altaUsuario: (
+    correo: string,
+    password: string,
+    rol: RolPerfil,
+  ) => Promise<boolean>;
 }
 
 export function useEquipo(): EstadoEquipo {
@@ -37,6 +45,7 @@ export function useEquipo(): EstadoEquipo {
   const [miembros, setMiembros] = useState<MiembroOrg[]>([]);
   const [invitaciones, setInvitaciones] = useState<Invitacion[]>([]);
   const [miUserId, setMiUserId] = useState<string | null>(null);
+  const [altaDisponible, setAltaDisponible] = useState(false);
 
   useEffect(() => {
     montado.current = true;
@@ -106,6 +115,16 @@ export function useEquipo(): EstadoEquipo {
           fechaCreacion: i.fecha_creacion,
         })),
       );
+
+      try {
+        const r = await fetch("/api/equipo/alta", { method: "GET" });
+        if (r.ok) {
+          const j = (await r.json()) as { disponible?: boolean };
+          if (montado.current) setAltaDisponible(Boolean(j.disponible));
+        }
+      } catch {
+        /* si el endpoint no responde, el alta queda oculta */
+      }
     } catch (e) {
       toast.error("No se pudo cargar el equipo", { description: msg(e) });
     } finally {
@@ -208,6 +227,40 @@ export function useEquipo(): EstadoEquipo {
     [conProceso],
   );
 
+  const altaUsuario = useCallback(
+    async (correo: string, password: string, rol: RolPerfil) => {
+      setProcesando(true);
+      try {
+        const r = await fetch("/api/equipo/alta", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ correo, password, rol }),
+        });
+        const j = (await r.json().catch(() => ({}))) as {
+          ok?: boolean;
+          creada?: boolean;
+          error?: string;
+        };
+        if (!r.ok || !j.ok) {
+          throw new Error(j.error ?? "No se pudo dar de alta la cuenta.");
+        }
+        toast.success(
+          j.creada
+            ? "Cuenta creada y añadida a la organización"
+            : "La cuenta ya existía; se añadió a la organización",
+        );
+        await cargar();
+        return true;
+      } catch (e) {
+        toast.error("No se pudo dar de alta", { description: msg(e) });
+        return false;
+      } finally {
+        setProcesando(false);
+      }
+    },
+    [cargar],
+  );
+
   return {
     disponible,
     cargando,
@@ -217,11 +270,13 @@ export function useEquipo(): EstadoEquipo {
     invitaciones,
     miUserId,
     soyAdmin,
+    altaDisponible,
     recargar: cargar,
     renombrar,
     invitar,
     cancelarInvitacion,
     cambiarRol,
     quitarMiembro,
+    altaUsuario,
   };
 }

@@ -41,6 +41,7 @@ import { Field } from "@/components/empresas/field";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
 import { useEquipo } from "@/lib/hooks/use-equipo";
+import { correoValido, generarPasswordTemporal } from "@/lib/equipo";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getFase2Repository, getRepository } from "@/lib/repository";
 import { clasificarSeguimiento } from "@/lib/seguimientos";
@@ -420,6 +421,10 @@ function SeccionEquipo() {
   const [nombreOrg, setNombreOrg] = useState("");
   const [correoInv, setCorreoInv] = useState("");
   const [rolInv, setRolInv] = useState<RolPerfil>("miembro");
+  const [correoAlta, setCorreoAlta] = useState("");
+  const [passAlta, setPassAlta] = useState("");
+  const [rolAlta, setRolAlta] = useState<RolPerfil>("miembro");
+  const [verPass, setVerPass] = useState(false);
 
   useEffect(() => {
     setNombreOrg(eq.organizacion?.nombre ?? "");
@@ -566,8 +571,105 @@ function SeccionEquipo() {
             </div>
           )}
 
+          {eq.soyAdmin && eq.altaDisponible && (
+            <div className="rounded-md border bg-muted/40 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Dar de alta una cuenta
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Field id="alta-correo" label="Correo">
+                  <Input
+                    id="alta-correo"
+                    type="email"
+                    value={correoAlta}
+                    onChange={(e) => setCorreoAlta(e.target.value)}
+                    placeholder="nuevo@empresa.com"
+                  />
+                </Field>
+                <Field id="alta-pass" label="Contraseña temporal">
+                  <div className="flex gap-1">
+                    <Input
+                      id="alta-pass"
+                      type={verPass ? "text" : "password"}
+                      value={passAlta}
+                      onChange={(e) => setPassAlta(e.target.value)}
+                      autoComplete="off"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0 px-2"
+                      onClick={() => {
+                        setPassAlta(generarPasswordTemporal());
+                        setVerPass(true);
+                      }}
+                    >
+                      Generar
+                    </Button>
+                  </div>
+                </Field>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Select
+                  value={rolAlta}
+                  onValueChange={(v) => setRolAlta(v as RolPerfil)}
+                >
+                  <SelectTrigger className="h-9 w-36" aria-label="Rol de la cuenta">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="miembro">Miembro</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  disabled={
+                    eq.procesando ||
+                    !correoValido(correoAlta) ||
+                    passAlta.length < 8
+                  }
+                  onClick={async () => {
+                    const ok = await eq.altaUsuario(
+                      correoAlta,
+                      passAlta,
+                      rolAlta,
+                    );
+                    if (ok) {
+                      setCorreoAlta("");
+                      setPassAlta("");
+                      setVerPass(false);
+                    }
+                  }}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Crear cuenta
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                La cuenta queda activa al instante. Comparte el correo y la
+                contraseña temporal con la persona; al entrar podrá cambiarla en
+                Configuración → Seguridad.
+              </p>
+            </div>
+          )}
+
+          {eq.soyAdmin && !eq.altaDisponible && (
+            <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+              Para dar de alta cuentas desde aquí, agrega la variable{" "}
+              <code className="rounded bg-muted px-1">
+                SUPABASE_SERVICE_ROLE_KEY
+              </code>{" "}
+              en Vercel (Settings → Environment Variables, sin el prefijo
+              NEXT_PUBLIC) y vuelve a desplegar. Mientras tanto puedes invitar
+              por correo a cuentas que ya existan.
+            </p>
+          )}
+
           {eq.soyAdmin && (
             <div className="rounded-md border bg-muted/40 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                O invitar a una cuenta existente
+              </p>
               <div className="flex flex-wrap items-end gap-2">
                 <Field id="inv-correo" label="Invitar por correo" className="flex-1">
                   <Input

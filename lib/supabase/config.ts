@@ -28,3 +28,16 @@ export const SUPABASE_KEY =
 export function isSupabaseConfigured(): boolean {
   return Boolean(SUPABASE_URL && SUPABASE_KEY);
 }
+
+/**
+ * Clave `service_role` — SOLO servidor. Nunca lleva prefijo `NEXT_PUBLIC_`, por
+ * lo que jamás llega al navegador. Se usa exclusivamente en Route Handlers para
+ * el alta de usuarios (Supabase Admin API). Si no está configurada, esa función
+ * queda deshabilitada y el resto de la app no se ve afectada.
+ */
+export const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
+export function tieneServiceRole(): boolean {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
