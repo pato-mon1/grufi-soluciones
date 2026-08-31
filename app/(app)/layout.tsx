@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { EmpresasProvider } from "@/lib/hooks/use-empresas";
+import { Fase2Provider } from "@/lib/hooks/use-fase2";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -27,7 +28,9 @@ export default async function AppLayout({
 
   return (
     <EmpresasProvider>
-      <AppShell>{children}</AppShell>
+      <Fase2Provider>
+        <AppShell>{children}</AppShell>
+      </Fase2Provider>
     </EmpresasProvider>
   );
 }

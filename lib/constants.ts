@@ -95,6 +95,21 @@ export const STORAGE_KEY_MODO = "seguimiento-modo:v1";
 export const SUPABASE_TABLE = "empresas";
 export const SUPABASE_TABLE_CONTACTOS = "contactos";
 export const SUPABASE_TABLE_ACTIVIDADES = "actividades";
+// Fase 2
+export const SUPABASE_TABLE_TAREAS = "tareas";
+export const SUPABASE_TABLE_CATEGORIAS = "categorias_finanzas";
+export const SUPABASE_TABLE_MOVIMIENTOS = "movimientos_financieros";
+export const SUPABASE_TABLE_EVENTOS = "eventos_calendario";
+export const SUPABASE_TABLE_PERFILES = "perfiles";
+export const SUPABASE_TABLE_AJUSTES = "ajustes_app";
+
+/** Claves de localStorage para los módulos de la Fase 2. */
+export const STORAGE_KEY_TAREAS = "seguimiento-tareas:v1";
+export const STORAGE_KEY_CATEGORIAS = "seguimiento-categorias:v1";
+export const STORAGE_KEY_MOVIMIENTOS = "seguimiento-movimientos:v1";
+export const STORAGE_KEY_EVENTOS = "seguimiento-eventos:v1";
+export const STORAGE_KEY_PERFIL = "seguimiento-perfil:v1";
+export const STORAGE_KEY_AJUSTES = "seguimiento-ajustes:v1";
 
 /** Icono (lucide) y tono para cada tipo de actividad del historial. */
 export const ACTIVIDAD_CONFIG: Record<

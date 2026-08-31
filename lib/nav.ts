@@ -24,7 +24,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/empresas", label: "Empresas", icon: Building2 },
   { href: "/seguimientos", label: "Seguimientos", icon: CalendarClock },
-  { href: "/tareas", label: "Tareas", icon: ListChecks, fase2: true },
+  { href: "/tareas", label: "Tareas", icon: ListChecks },
   { href: "/calendario", label: "Calendario", icon: CalendarDays, fase2: true },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/finanzas", label: "Finanzas", icon: Wallet, fase2: true },
