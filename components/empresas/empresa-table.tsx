@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -113,13 +114,12 @@ export function EmpresaTable(props: EmpresaTableProps) {
             {empresas.map((empresa) => (
               <TableRow key={empresa.id} className="group">
                 <TableCell className="max-w-[220px]">
-                  <button
-                    type="button"
-                    onClick={() => onVerDetalle(empresa)}
+                  <Link
+                    href={`/empresas/${empresa.id}`}
                     className="text-left font-medium text-foreground hover:text-primary hover:underline"
                   >
                     {empresa.nombre}
-                  </button>
+                  </Link>
                   {resumenContactos(contactos, empresa.id) && (
                     <p className="truncate text-xs text-muted-foreground">
                       {resumenContactos(contactos, empresa.id)}
@@ -174,11 +174,7 @@ export function EmpresaTable(props: EmpresaTableProps) {
         {empresas.map((empresa) => (
           <li key={empresa.id} className="flex flex-col gap-3 p-4">
             <div className="flex items-start justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => onVerDetalle(empresa)}
-                className="text-left"
-              >
+              <Link href={`/empresas/${empresa.id}`} className="text-left">
                 <p className="font-medium hover:text-primary hover:underline">
                   {empresa.nombre}
                 </p>
@@ -187,7 +183,7 @@ export function EmpresaTable(props: EmpresaTableProps) {
                     {resumenContactos(contactos, empresa.id)}
                   </p>
                 )}
-              </button>
+              </Link>
               <EmpresaActionsMenu
                 empresa={empresa}
                 onVerDetalle={onVerDetalle}
