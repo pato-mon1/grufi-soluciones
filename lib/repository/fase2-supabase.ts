@@ -1,5 +1,6 @@
 import {
   SUPABASE_TABLE_AJUSTES,
+  SUPABASE_TABLE_BITACORA,
   SUPABASE_TABLE_CATEGORIAS,
   SUPABASE_TABLE_EVENTOS,
   SUPABASE_TABLE_MOVIMIENTOS,
@@ -9,15 +10,19 @@ import {
 import { getSupabaseClient, getUsuarioActual } from "@/lib/supabase/client";
 import {
   AJUSTES_PREDETERMINADOS,
+  type AccionBitacora,
   type AjustesApp,
   type CategoriaFinanza,
   type CategoriaFinanzaInput,
+  type EntidadBitacora,
+  type EntradaBitacora,
   type EstadoMovimiento,
   type EstadoTarea,
   type EventoCalendario,
   type EventoInput,
   type MovimientoFinanciero,
   type MovimientoInput,
+  type NuevaEntradaBitacora,
   type Perfil,
   type PerfilInput,
   type PrioridadTarea,
@@ -91,6 +96,15 @@ interface FilaPerfil {
   activo: boolean | null;
   fecha_creacion: string;
   fecha_actualizacion: string;
+}
+
+interface FilaBitacora {
+  id: string;
+  entidad: EntidadBitacora;
+  entidad_id: string | null;
+  accion: AccionBitacora;
+  resumen: string | null;
+  fecha: string;
 }
 
 // ── Utilidades ──────────────────────────────────────────────
@@ -480,6 +494,35 @@ class Fase2SupabaseRepository implements Fase2Repository {
       );
     if (error) throw new Error(error.message);
     return normalizados;
+  }
+
+  // Bitácora
+
+  async listBitacora(limite = 200): Promise<EntradaBitacora[]> {
+    const { data, error } = await this.sb
+      .from(SUPABASE_TABLE_BITACORA)
+      .select("*")
+      .order("fecha", { ascending: false })
+      .limit(limite);
+    if (error) throw new Error(error.message);
+    return (data as FilaBitacora[]).map((f) => ({
+      id: f.id,
+      entidad: f.entidad,
+      entidadId: f.entidad_id,
+      accion: f.accion,
+      resumen: f.resumen ?? "",
+      fecha: f.fecha,
+    }));
+  }
+
+  async registrarBitacora(entrada: NuevaEntradaBitacora): Promise<void> {
+    const { error } = await this.sb.from(SUPABASE_TABLE_BITACORA).insert({
+      entidad: entrada.entidad,
+      entidad_id: entrada.entidadId,
+      accion: entrada.accion,
+      resumen: entrada.resumen,
+    });
+    if (error) throw new Error(error.message);
   }
 }
 

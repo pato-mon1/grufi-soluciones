@@ -1,5 +1,6 @@
 import {
   STORAGE_KEY_AJUSTES,
+  STORAGE_KEY_BITACORA,
   STORAGE_KEY_CATEGORIAS,
   STORAGE_KEY_EVENTOS,
   STORAGE_KEY_MOVIMIENTOS,
@@ -12,10 +13,12 @@ import {
   type AjustesApp,
   type CategoriaFinanza,
   type CategoriaFinanzaInput,
+  type EntradaBitacora,
   type EventoCalendario,
   type EventoInput,
   type MovimientoFinanciero,
   type MovimientoInput,
+  type NuevaEntradaBitacora,
   type Perfil,
   type PerfilInput,
   type Tarea,
@@ -304,6 +307,28 @@ class Fase2LocalRepository implements Fase2Repository {
     const normalizados: AjustesApp = { ...AJUSTES_PREDETERMINADOS, ...ajustes };
     escribir(STORAGE_KEY_AJUSTES, normalizados);
     return demora(normalizados);
+  }
+
+  // ── Bitácora ──
+
+  async listBitacora(limite = 200): Promise<EntradaBitacora[]> {
+    const lista = leer<EntradaBitacora>(STORAGE_KEY_BITACORA);
+    return demora(
+      [...lista]
+        .sort((a, b) => b.fecha.localeCompare(a.fecha))
+        .slice(0, limite),
+    );
+  }
+
+  async registrarBitacora(entrada: NuevaEntradaBitacora): Promise<void> {
+    const lista = leer<EntradaBitacora>(STORAGE_KEY_BITACORA);
+    const nueva: EntradaBitacora = {
+      ...entrada,
+      id: generarId(),
+      fecha: ahora(),
+    };
+    // Se conservan como máximo las 500 entradas más recientes.
+    escribir(STORAGE_KEY_BITACORA, [nueva, ...lista].slice(0, 500));
   }
 }
 

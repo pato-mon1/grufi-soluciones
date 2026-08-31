@@ -1,5 +1,6 @@
 import { ESTADO_CONFIG } from "@/lib/constants";
 import { hoyISO } from "@/lib/date";
+import { fechaEnZona, horaEnZona } from "@/lib/zona";
 import type {
   Empresa,
   EventoCalendario,
@@ -142,17 +143,21 @@ interface FuentesCalendario {
   tareas: Tarea[];
   movimientos: MovimientoFinanciero[];
   eventos: EventoCalendario[];
+  /** Zona horaria para ubicar los eventos (por defecto America/Monterrey). */
+  zona?: string;
 }
 
 /**
  * Reúne en una sola lista los elementos con fecha de todos los módulos:
  * seguimientos, tareas con fecha límite, cobros/pagos pendientes y eventos.
+ * Los eventos (instantes UTC) se ubican en `zona`.
  */
 export function construirItems({
   empresas,
   tareas,
   movimientos,
   eventos,
+  zona,
 }: FuentesCalendario): ItemCalendario[] {
   const nombreEmpresa = new Map<string, string>();
   for (const e of empresas) nombreEmpresa.set(e.id, e.nombre);
@@ -211,8 +216,12 @@ export function construirItems({
       id: `evento:${ev.id}`,
       origenId: ev.id,
       tipo: "evento",
-      fecha: ev.inicio.slice(0, 10),
-      hora: ev.todoElDia ? null : ev.inicio.slice(11, 16),
+      fecha: zona ? fechaEnZona(ev.inicio, zona) : ev.inicio.slice(0, 10),
+      hora: ev.todoElDia
+        ? null
+        : zona
+          ? horaEnZona(ev.inicio, zona)
+          : ev.inicio.slice(11, 16),
       titulo: ev.titulo,
       empresaNombre: ev.empresaId
         ? nombreEmpresa.get(ev.empresaId)

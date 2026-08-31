@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   fijarPreferenciaModo,
+  getFase2Repository,
   getRepository,
   usandoSupabase,
 } from "@/lib/repository";
@@ -27,6 +28,7 @@ import type {
   EmpresaInput,
   EstadoEmpresa,
   NuevaActividad,
+  NuevaEntradaBitacora,
 } from "@/lib/types";
 import { formatearFecha, formatearFechaLarga, hoyISO } from "@/lib/date";
 
@@ -106,6 +108,17 @@ const EmpresasContext = createContext<EmpresasContextValor | null>(null);
 function mensajeError(e: unknown): string {
   if (e instanceof Error) return e.message;
   return "Ocurrió un error inesperado.";
+}
+
+/** Anota en la bitácora global sin bloquear ni romper la acción principal. */
+function anotarBitacora(entrada: NuevaEntradaBitacora): void {
+  try {
+    void getFase2Repository()
+      .registrarBitacora(entrada)
+      .catch(() => {});
+  } catch {
+    /* la bitácora nunca interrumpe la operación */
+  }
 }
 
 export function EmpresasProvider({ children }: { children: React.ReactNode }) {
@@ -246,6 +259,12 @@ export function EmpresasProvider({ children }: { children: React.ReactNode }) {
         const creada = await repo.create(input);
         setEmpresas((prev) => [creada, ...prev]);
         toast.success("Empresa agregada", { description: creada.nombre });
+        anotarBitacora({
+          entidad: "empresa",
+          entidadId: creada.id,
+          accion: "crear",
+          resumen: creada.nombre,
+        });
         return creada;
       } catch (e) {
         toast.error("No se pudo agregar la empresa", {
@@ -483,6 +502,12 @@ export function EmpresasProvider({ children }: { children: React.ReactNode }) {
       try {
         await repo.remove(id);
         toast.success("Empresa eliminada", { description: empresa?.nombre });
+        anotarBitacora({
+          entidad: "empresa",
+          entidadId: id,
+          accion: "eliminar",
+          resumen: empresa?.nombre ?? "",
+        });
       } catch (e) {
         setEmpresas(previoEmp);
         setContactos(previoCon);

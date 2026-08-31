@@ -2,10 +2,12 @@ import type {
   AjustesApp,
   CategoriaFinanza,
   CategoriaFinanzaInput,
+  EntradaBitacora,
   EventoCalendario,
   EventoInput,
   MovimientoFinanciero,
   MovimientoInput,
+  NuevaEntradaBitacora,
   Perfil,
   PerfilInput,
   Tarea,
@@ -62,4 +64,8 @@ export interface Fase2Repository {
   // ── Ajustes de la aplicación ──
   obtenerAjustes(): Promise<AjustesApp>;
   guardarAjustes(ajustes: AjustesApp): Promise<AjustesApp>;
+
+  // ── Bitácora (auditoría, solo se agregan entradas) ──
+  listBitacora(limite?: number): Promise<EntradaBitacora[]>;
+  registrarBitacora(entrada: NuevaEntradaBitacora): Promise<void>;
 }

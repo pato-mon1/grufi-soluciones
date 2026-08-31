@@ -286,3 +286,38 @@ export const AJUSTES_PREDETERMINADOS: AjustesApp = {
   notifTareasDias: 2,
   notifCobrosDias: 3,
 };
+
+// ────────────────────────────────────────────────────────────
+// FASE 3A — Bitácora global (auditoría transversal)
+// ────────────────────────────────────────────────────────────
+
+export const ENTIDADES_BITACORA = [
+  "empresa",
+  "contacto",
+  "tarea",
+  "movimiento",
+  "categoria",
+  "evento",
+  "ajustes",
+  "respaldo",
+] as const;
+export type EntidadBitacora = (typeof ENTIDADES_BITACORA)[number];
+
+export const ACCIONES_BITACORA = [
+  "crear",
+  "editar",
+  "eliminar",
+  "restaurar",
+] as const;
+export type AccionBitacora = (typeof ACCIONES_BITACORA)[number];
+
+export interface EntradaBitacora {
+  id: string;
+  entidad: EntidadBitacora;
+  entidadId: string | null;
+  accion: AccionBitacora;
+  resumen: string;
+  fecha: string;
+}
+
+export type NuevaEntradaBitacora = Omit<EntradaBitacora, "id" | "fecha">;

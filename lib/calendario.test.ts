@@ -131,6 +131,19 @@ describe("construirItems", () => {
     expect(ev?.fecha).toBe("2026-06-18");
     expect(ev?.hora).toBe("09:30");
   });
+
+  it("ubica los eventos en la zona horaria indicada", () => {
+    const items = construirItems({
+      empresas: [],
+      tareas: [],
+      movimientos: [],
+      eventos: [{ ...evento, inicio: "2026-06-19T02:00:00.000Z" }], // 20:00 del 18 en MTY
+      zona: "America/Monterrey",
+    });
+    const ev = items.find((i) => i.tipo === "evento");
+    expect(ev?.fecha).toBe("2026-06-18");
+    expect(ev?.hora).toBe("20:00");
+  });
 });
 
 describe("itemsPorDia", () => {

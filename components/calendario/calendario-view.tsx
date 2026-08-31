@@ -51,6 +51,12 @@ import {
   type VistaCalendario,
 } from "@/lib/calendario";
 import {
+  fechaEnZona,
+  horaEnZona,
+  inicioDiaUtcISO,
+  muroAUtcISO,
+} from "@/lib/zona";
+import {
   TIPOS_EVENTO,
   type EventoCalendario,
   type EventoInput,
@@ -102,12 +108,14 @@ export function CalendarioView() {
     eventos,
     tareas,
     movimientos,
+    ajustes,
     cargando,
     procesando,
     crearEvento,
     actualizarEvento,
     eliminarEvento,
   } = useFase2();
+  const zona = ajustes.zonaHoraria;
 
   const hoy = hoyISO();
   const [vista, setVista] = useState<VistaCalendario>("mes");
@@ -123,8 +131,8 @@ export function CalendarioView() {
   const mes = anclaDate.getMonth();
 
   const items = useMemo(
-    () => construirItems({ empresas, tareas, movimientos, eventos }),
-    [empresas, tareas, movimientos, eventos],
+    () => construirItems({ empresas, tareas, movimientos, eventos, zona }),
+    [empresas, tareas, movimientos, eventos, zona],
   );
   const porDia = useMemo(() => itemsPorDia(items), [items]);
 
@@ -183,7 +191,7 @@ export function CalendarioView() {
     <div className="mx-auto w-full max-w-6xl space-y-5 px-4 py-8 sm:px-6 lg:py-10">
       <PageHeader
         title="Calendario"
-        subtitle="Seguimientos, tareas, cobros y eventos en un solo lugar."
+        subtitle={`Seguimientos, tareas, cobros y eventos en un solo lugar · ${zona}`}
         action={
           <Button className="w-full sm:w-auto" onClick={() => nuevoEvento()}>
             <Plus className="h-4 w-4 text-champagne" />
@@ -301,6 +309,7 @@ export function CalendarioView() {
         abierto={formAbierto}
         evento={enEdicion}
         fechaInicial={fechaNuevo}
+        zona={zona}
         empresas={empresas.map((e) => ({ id: e.id, nombre: e.nombre }))}
         procesando={procesando}
         onOpenChange={(v) => {
@@ -588,6 +597,7 @@ function EventoFormDialog({
   abierto,
   evento,
   fechaInicial,
+  zona,
   empresas,
   procesando,
   onOpenChange,
@@ -597,6 +607,7 @@ function EventoFormDialog({
   abierto: boolean;
   evento: EventoCalendario | null;
   fechaInicial: string;
+  zona: string;
   empresas: { id: string; nombre: string }[];
   procesando: boolean;
   onOpenChange: (abierto: boolean) => void;
@@ -622,10 +633,12 @@ function EventoFormDialog({
       setDescripcion(evento.descripcion);
       setEmpresaId(evento.empresaId);
       setTipo(evento.tipo);
-      setFecha(evento.inicio.slice(0, 10));
+      setFecha(fechaEnZona(evento.inicio, zona));
       setTodoElDia(evento.todoElDia);
-      setHoraInicio(evento.todoElDia ? "09:00" : evento.inicio.slice(11, 16));
-      setHoraFin(evento.fin ? evento.fin.slice(11, 16) : "");
+      setHoraInicio(
+        evento.todoElDia ? "09:00" : horaEnZona(evento.inicio, zona),
+      );
+      setHoraFin(evento.fin ? horaEnZona(evento.fin, zona) : "");
     } else {
       setTitulo("");
       setDescripcion("");
@@ -636,7 +649,7 @@ function EventoFormDialog({
       setHoraInicio("09:00");
       setHoraFin("");
     }
-  }, [abierto, evento, fechaInicial]);
+  }, [abierto, evento, fechaInicial, zona]);
 
   async function enviar() {
     if (!titulo.trim()) {
@@ -644,13 +657,10 @@ function EventoFormDialog({
       return;
     }
     const inicio = todoElDia
-      ? `${fecha}T00:00:00`
-      : `${fecha}T${horaInicio || "09:00"}:00`;
-    const fin = todoElDia
-      ? null
-      : horaFin
-        ? `${fecha}T${horaFin}:00`
-        : null;
+      ? inicioDiaUtcISO(fecha, zona)
+      : muroAUtcISO(fecha, horaInicio || "09:00", zona);
+    const fin =
+      todoElDia || !horaFin ? null : muroAUtcISO(fecha, horaFin, zona);
     await onGuardar({
       empresaId,
       titulo: titulo.trim(),

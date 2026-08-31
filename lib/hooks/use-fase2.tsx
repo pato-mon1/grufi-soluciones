@@ -17,11 +17,13 @@ import {
   type AjustesApp,
   type CategoriaFinanza,
   type CategoriaFinanzaInput,
+  type EntradaBitacora,
   type EstadoTarea,
   type EventoCalendario,
   type EventoInput,
   type MovimientoFinanciero,
   type MovimientoInput,
+  type NuevaEntradaBitacora,
   type Perfil,
   type PerfilInput,
   type Tarea,
@@ -87,6 +89,10 @@ interface Fase2ContextValor {
   guardarPerfil: (input: PerfilInput) => Promise<Perfil | null>;
   ajustes: AjustesApp;
   guardarAjustes: (ajustes: AjustesApp) => Promise<void>;
+
+  // Bitácora (auditoría transversal)
+  bitacora: EntradaBitacora[];
+  anotarBitacora: (entrada: NuevaEntradaBitacora) => Promise<void>;
 }
 
 const Fase2Context = createContext<Fase2ContextValor | null>(null);
@@ -102,6 +108,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
   const [eventos, setEventos] = useState<EventoCalendario[]>([]);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [ajustes, setAjustes] = useState<AjustesApp>(AJUSTES_PREDETERMINADOS);
+  const [bitacora, setBitacora] = useState<EntradaBitacora[]>([]);
   const [cargando, setCargando] = useState(true);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,13 +124,14 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     setCargando(true);
     setError(null);
     try {
-      const [t, c, m, ev, p, aj] = await Promise.all([
+      const [t, c, m, ev, p, aj, bit] = await Promise.all([
         repo.listTareas(),
         repo.listCategorias(),
         repo.listMovimientos(),
         repo.listEventos(),
         repo.obtenerPerfil(),
         repo.obtenerAjustes(),
+        repo.listBitacora(200),
       ]);
       if (!montado.current) return;
       setTareas(t);
@@ -131,6 +139,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
       setMovimientos(m);
       setEventos(ev);
       setAjustes(aj);
+      setBitacora(bit);
 
       // Si no hay perfil todavía, se crea uno mínimo con el correo de la sesión.
       if (p) {
@@ -188,6 +197,30 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  /** Registra una entrada de bitácora sin bloquear la acción principal. */
+  const anotar = useCallback(
+    async (entrada: NuevaEntradaBitacora) => {
+      try {
+        await repo.registrarBitacora(entrada);
+        if (montado.current) {
+          setBitacora((prev) =>
+            [
+              {
+                ...entrada,
+                id: `tmp-${Math.random().toString(36).slice(2)}`,
+                fecha: new Date().toISOString(),
+              },
+              ...prev,
+            ].slice(0, 200),
+          );
+        }
+      } catch {
+        /* la bitácora nunca interrumpe la operación */
+      }
+    },
+    [repo],
+  );
+
   // ── Tareas ──
 
   const crearTarea = useCallback(
@@ -196,12 +229,18 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         async () => {
           const t = await repo.crearTarea(input);
           setTareas((prev) => [t, ...prev]);
+          void anotar({
+            entidad: "tarea",
+            entidadId: t.id,
+            accion: "crear",
+            resumen: t.titulo,
+          });
           return t;
         },
         "Tarea creada",
         "No se pudo crear la tarea",
       ),
-    [repo, conProceso],
+    [repo, conProceso, anotar],
   );
 
   const actualizarTarea = useCallback(
@@ -251,10 +290,17 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
   const eliminarTarea = useCallback(
     async (id: string) => {
       const previo = tareas;
+      const objetivo = tareas.find((t) => t.id === id);
       setTareas((prev) => prev.filter((t) => t.id !== id));
       try {
         await repo.eliminarTarea(id);
         toast.success("Tarea eliminada");
+        void anotar({
+          entidad: "tarea",
+          entidadId: id,
+          accion: "eliminar",
+          resumen: objetivo?.titulo ?? "",
+        });
       } catch (e) {
         setTareas(previo);
         toast.error("No se pudo eliminar la tarea", {
@@ -262,7 +308,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [tareas, repo],
+    [tareas, repo, anotar],
   );
 
   // ── Categorías ──
@@ -275,12 +321,18 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
           setCategorias((prev) =>
             [...prev, c].sort((a, b) => a.nombre.localeCompare(b.nombre)),
           );
+          void anotar({
+            entidad: "categoria",
+            entidadId: c.id,
+            accion: "crear",
+            resumen: `${c.nombre} (${c.tipo})`,
+          });
           return c;
         },
         "Categoría creada",
         "No se pudo crear la categoría",
       ),
-    [repo, conProceso],
+    [repo, conProceso, anotar],
   );
 
   const actualizarCategoria = useCallback(
@@ -308,6 +360,12 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
       try {
         await repo.eliminarCategoria(id);
         toast.success("Categoría eliminada");
+        void anotar({
+          entidad: "categoria",
+          entidadId: id,
+          accion: "eliminar",
+          resumen: categorias.find((c) => c.id === id)?.nombre ?? "",
+        });
       } catch (e) {
         setCategorias(previoCat);
         setMovimientos(previoMov);
@@ -316,7 +374,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [categorias, movimientos, repo],
+    [categorias, movimientos, repo, anotar],
   );
 
   // ── Movimientos ──
@@ -327,6 +385,12 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         async () => {
           const m = await repo.crearMovimiento(input);
           setMovimientos((prev) => [m, ...prev]);
+          void anotar({
+            entidad: "movimiento",
+            entidadId: m.id,
+            accion: "crear",
+            resumen: `${m.tipo === "ingreso" ? "Ingreso" : "Egreso"}: ${m.concepto}`,
+          });
           return m;
         },
         input.estado === "pendiente"
@@ -334,7 +398,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
           : "Movimiento registrado",
         "No se pudo registrar el movimiento",
       ),
-    [repo, conProceso],
+    [repo, conProceso, anotar],
   );
 
   const actualizarMovimiento = useCallback(
@@ -375,10 +439,17 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
   const eliminarMovimiento = useCallback(
     async (id: string) => {
       const previo = movimientos;
+      const objetivo = movimientos.find((m) => m.id === id);
       setMovimientos((prev) => prev.filter((m) => m.id !== id));
       try {
         await repo.eliminarMovimiento(id);
         toast.success("Movimiento eliminado");
+        void anotar({
+          entidad: "movimiento",
+          entidadId: id,
+          accion: "eliminar",
+          resumen: objetivo?.concepto ?? "",
+        });
       } catch (e) {
         setMovimientos(previo);
         toast.error("No se pudo eliminar el movimiento", {
@@ -386,7 +457,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [movimientos, repo],
+    [movimientos, repo, anotar],
   );
 
   // ── Eventos ──
@@ -399,12 +470,18 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
           setEventos((prev) =>
             [...prev, ev].sort((a, b) => a.inicio.localeCompare(b.inicio)),
           );
+          void anotar({
+            entidad: "evento",
+            entidadId: ev.id,
+            accion: "crear",
+            resumen: ev.titulo,
+          });
           return ev;
         },
         "Evento creado",
         "No se pudo crear el evento",
       ),
-    [repo, conProceso],
+    [repo, conProceso, anotar],
   );
 
   const actualizarEvento = useCallback(
@@ -428,10 +505,17 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
   const eliminarEvento = useCallback(
     async (id: string) => {
       const previo = eventos;
+      const objetivo = eventos.find((e) => e.id === id);
       setEventos((prev) => prev.filter((e) => e.id !== id));
       try {
         await repo.eliminarEvento(id);
         toast.success("Evento eliminado");
+        void anotar({
+          entidad: "evento",
+          entidadId: id,
+          accion: "eliminar",
+          resumen: objetivo?.titulo ?? "",
+        });
       } catch (e) {
         setEventos(previo);
         toast.error("No se pudo eliminar el evento", {
@@ -439,7 +523,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [eventos, repo],
+    [eventos, repo, anotar],
   );
 
   // ── Configuración ──
@@ -466,6 +550,12 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         const guardados = await repo.guardarAjustes(nuevos);
         setAjustes(guardados);
         toast.success("Ajustes guardados");
+        void anotar({
+          entidad: "ajustes",
+          entidadId: null,
+          accion: "editar",
+          resumen: "Ajustes de la aplicación actualizados",
+        });
       } catch (e) {
         setAjustes(previo);
         toast.error("No se pudieron guardar los ajustes", {
@@ -473,7 +563,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [ajustes, repo],
+    [ajustes, repo, anotar],
   );
 
   const valor: Fase2ContextValor = {
@@ -504,6 +594,8 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     guardarPerfil,
     ajustes,
     guardarAjustes,
+    bitacora,
+    anotarBitacora: anotar,
   };
 
   return (
