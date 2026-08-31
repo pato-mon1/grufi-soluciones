@@ -14,9 +14,7 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** El módulo llega en la Fase 2 (ruta con estado "en construcción"). */
-  fase2?: boolean;
-  /** Solo visible para administradores (se aplicará con `profiles` en Fase 2). */
+  /** Solo visible para perfiles con rol de administrador. */
   soloAdmin?: boolean;
 }
 
@@ -33,7 +31,6 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/configuracion",
     label: "Configuración",
     icon: Settings,
-    fase2: true,
     soloAdmin: true,
   },
 ];

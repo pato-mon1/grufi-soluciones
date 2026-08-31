@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
+import { useFase2 } from "@/lib/hooks/use-fase2";
 import {
   Sheet,
   SheetContent,
@@ -29,15 +30,18 @@ function rutaActiva(pathname: string, href: string): boolean {
 function NavLista({
   pathname,
   colapsado,
+  esAdmin,
   onNavegar,
 }: {
   pathname: string;
   colapsado: boolean;
+  esAdmin: boolean;
   onNavegar?: () => void;
 }) {
+  const items = NAV_ITEMS.filter((item) => !item.soloAdmin || esAdmin);
   return (
     <nav className="flex flex-1 flex-col gap-0.5 p-2" aria-label="Navegación">
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const activa = rutaActiva(pathname, item.href);
         const Icono = item.icon;
         return (
@@ -71,11 +75,6 @@ function NavLista({
             />
             {!colapsado && (
               <span className="flex-1 truncate">{item.label}</span>
-            )}
-            {!colapsado && item.fase2 && (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                Fase 2
-              </span>
             )}
           </Link>
         );
@@ -151,6 +150,8 @@ function PiePanel({ colapsado }: { colapsado?: boolean }) {
 /** Layout interno: barra lateral fija/colapsable + drawer móvil + contenido. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { perfil } = useFase2();
+  const esAdmin = !perfil || perfil.rol === "admin";
   const [colapsado, setColapsado] = useState(false);
   const [drawerAbierto, setDrawerAbierto] = useState(false);
 
@@ -184,7 +185,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </button>
         </div>
-        <NavLista pathname={pathname} colapsado={colapsado} />
+        <NavLista pathname={pathname} colapsado={colapsado} esAdmin={esAdmin} />
         <PiePanel colapsado={colapsado} />
       </aside>
 
@@ -198,6 +199,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavLista
             pathname={pathname}
             colapsado={false}
+            esAdmin={esAdmin}
             onNavegar={() => setDrawerAbierto(false)}
           />
           <PiePanel />
