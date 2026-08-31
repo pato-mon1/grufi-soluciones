@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AlertCircle, RotateCw } from "lucide-react";
+import { AlertCircle, Plus, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AppHeader } from "@/components/empresas/app-header";
+import { PageHeader } from "@/components/app-shell/page-header";
 import {
   SummaryCards,
   type IdTarjetaResumen,
@@ -52,9 +52,6 @@ export function Dashboard() {
     cargando,
     procesando,
     error,
-    esSupabase,
-    usuario,
-    cerrarSesion,
     importacionPendiente,
     importarLocalesASupabase,
     continuarEnModoLocal,
@@ -204,11 +201,15 @@ export function Dashboard() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:py-10">
-      <AppHeader
-        esSupabase={esSupabase}
-        usuario={usuario}
-        onAgregar={abrirNueva}
-        onCerrarSesion={() => void cerrarSesion()}
+      <PageHeader
+        title="Empresas"
+        subtitle="Administra y consulta el avance de cada oportunidad"
+        action={
+          <Button onClick={abrirNueva} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 text-champagne" />
+            Agregar empresa
+          </Button>
+        }
       />
 
       <SummaryCards

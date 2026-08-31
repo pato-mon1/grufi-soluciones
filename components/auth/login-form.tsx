@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/empresas/field";
+import { RUTA_INICIO } from "@/lib/nav";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 /** Traduce los mensajes de error de Supabase Auth al español. */
@@ -55,8 +56,8 @@ export function LoginForm() {
         return;
       }
 
-      // Sesión iniciada: el middleware ya permitirá el acceso al dashboard.
-      router.replace("/");
+      // Sesión iniciada: el middleware ya permitirá el acceso al área interna.
+      router.replace(RUTA_INICIO);
       router.refresh();
     } catch {
       setError("No se pudo iniciar sesión. Inténtalo de nuevo.");

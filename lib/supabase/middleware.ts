@@ -72,7 +72,7 @@ export async function updateSession(
 
   if (session && esRutaPublica) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/empresas";
     url.search = "";
     return NextResponse.redirect(url);
   }

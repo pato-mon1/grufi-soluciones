@@ -106,6 +106,31 @@
   }
 }
 
+/* Impresión / exportación a PDF (Reportes) */
+@media print {
+  /* Oculta navegación, barras y controles no imprimibles */
+  [data-print-hide] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .print-full {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .shadow-card,
+  .shadow-card-hover {
+    box-shadow: none !important;
+  }
+  .print-break-avoid {
+    break-inside: avoid;
+  }
+}
+
 /* Barra de scroll discreta */
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar {
