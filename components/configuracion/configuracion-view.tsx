@@ -10,7 +10,11 @@ import {
   History,
   Loader2,
   LogOut,
+  Mail,
   ShieldAlert,
+  Trash2,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,6 +40,7 @@ import { PageHeader } from "@/components/app-shell/page-header";
 import { Field } from "@/components/empresas/field";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
+import { useEquipo } from "@/lib/hooks/use-equipo";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getFase2Repository, getRepository } from "@/lib/repository";
 import { clasificarSeguimiento } from "@/lib/seguimientos";
@@ -45,7 +50,7 @@ import {
   type EstadoOportunidadInput,
   type EstadoResuelto,
 } from "@/lib/estados";
-import { formatearFechaHora, hoyISO } from "@/lib/date";
+import { formatearFecha, formatearFechaHora, hoyISO } from "@/lib/date";
 import { formatearMonto, montoATextoEntrada, parsearMonto } from "@/lib/money";
 import {
   construirRespaldo,
@@ -266,6 +271,8 @@ export function ConfiguracionView() {
         onGuardar={guardarPerfil}
       />
 
+      <SeccionEquipo />
+
       <SeccionAjustes ajustes={ajustes} onGuardar={guardarAjustes} />
 
       <SeccionEstados
@@ -404,6 +411,205 @@ function SeccionPerfil({
       >
         Guardar perfil
       </Button>
+    </TarjetaSeccion>
+  );
+}
+
+function SeccionEquipo() {
+  const eq = useEquipo();
+  const [nombreOrg, setNombreOrg] = useState("");
+  const [correoInv, setCorreoInv] = useState("");
+  const [rolInv, setRolInv] = useState<RolPerfil>("miembro");
+
+  useEffect(() => {
+    setNombreOrg(eq.organizacion?.nombre ?? "");
+  }, [eq.organizacion]);
+
+  if (!eq.disponible) {
+    return (
+      <TarjetaSeccion
+        titulo="Equipo"
+        descripcion="Comparte los datos con otras personas."
+      >
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Users className="h-4 w-4" />
+          El equipo requiere el modo Nube (Supabase). En modo Local los datos
+          son de este navegador.
+        </p>
+      </TarjetaSeccion>
+    );
+  }
+
+  return (
+    <TarjetaSeccion
+      titulo="Equipo"
+      descripcion="Personas que comparten los datos de esta organización. Solo un administrador puede invitar o cambiar roles."
+    >
+      {eq.cargando ? (
+        <div className="space-y-2">
+          {[0, 1].map((i) => (
+            <div key={i} className="h-9 animate-pulse rounded bg-muted" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-end gap-2">
+            <Field id="org-nombre" label="Nombre de la organización" className="flex-1">
+              <Input
+                id="org-nombre"
+                value={nombreOrg}
+                disabled={!eq.soyAdmin}
+                onChange={(e) => setNombreOrg(e.target.value)}
+              />
+            </Field>
+            {eq.soyAdmin && (
+              <Button
+                variant="outline"
+                disabled={eq.procesando || !nombreOrg.trim()}
+                onClick={() => void eq.renombrar(nombreOrg)}
+              >
+                Guardar
+              </Button>
+            )}
+          </div>
+
+          <div>
+            <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Miembros ({eq.miembros.length})
+            </h3>
+            <ul className="space-y-1">
+              {eq.miembros.map((m) => {
+                const soyYo = m.userId === eq.miUserId;
+                return (
+                  <li
+                    key={m.id}
+                    className="flex flex-wrap items-center gap-2 rounded-md border px-2 py-1.5 text-sm"
+                  >
+                    <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate">
+                      {m.correo || "—"}
+                      {soyYo && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          (tú)
+                        </span>
+                      )}
+                    </span>
+                    {eq.soyAdmin && !soyYo ? (
+                      <Select
+                        value={m.rol}
+                        onValueChange={(v) =>
+                          void eq.cambiarRol(m.id, v as RolPerfil)
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-32 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                          <SelectItem value="miembro">Miembro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        {m.rol === "admin" ? "Administrador" : "Miembro"}
+                      </span>
+                    )}
+                    {eq.soyAdmin && !soyYo && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        aria-label={`Quitar a ${m.correo}`}
+                        disabled={eq.procesando}
+                        onClick={() => void eq.quitarMiembro(m.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {eq.invitaciones.length > 0 && (
+            <div>
+              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Invitaciones pendientes
+              </h3>
+              <ul className="space-y-1">
+                {eq.invitaciones.map((i) => (
+                  <li
+                    key={i.id}
+                    className="flex flex-wrap items-center gap-2 rounded-md border border-dashed px-2 py-1.5 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {i.correo}
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        · {i.rol === "admin" ? "admin" : "miembro"} ·{" "}
+                        {formatearFecha(i.fechaCreacion)}
+                      </span>
+                    </span>
+                    {eq.soyAdmin && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={eq.procesando}
+                        onClick={() => void eq.cancelarInvitacion(i.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {eq.soyAdmin && (
+            <div className="rounded-md border bg-muted/40 p-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <Field id="inv-correo" label="Invitar por correo" className="flex-1">
+                  <Input
+                    id="inv-correo"
+                    type="email"
+                    value={correoInv}
+                    onChange={(e) => setCorreoInv(e.target.value)}
+                    placeholder="persona@empresa.com"
+                  />
+                </Field>
+                <Select
+                  value={rolInv}
+                  onValueChange={(v) => setRolInv(v as RolPerfil)}
+                >
+                  <SelectTrigger className="h-9 w-32" aria-label="Rol">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="miembro">Miembro</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  disabled={eq.procesando || !correoInv.trim()}
+                  onClick={async () => {
+                    await eq.invitar(correoInv, rolInv);
+                    setCorreoInv("");
+                  }}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invitar
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                La persona debe tener una cuenta en el sistema. Al iniciar sesión
+                se unirá automáticamente a la organización. (La creación de
+                cuentas nuevas se hace desde Supabase.)
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </TarjetaSeccion>
   );
 }
