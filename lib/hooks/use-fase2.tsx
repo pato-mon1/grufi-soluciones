@@ -13,11 +13,18 @@ import { toast } from "sonner";
 import { getFase2Repository, usandoSupabase } from "@/lib/repository";
 import { getUsuarioActual } from "@/lib/supabase/client";
 import {
+  resolverEstados,
+  type EstadoOportunidad,
+  type EstadoOportunidadInput,
+  type EstadoResuelto,
+} from "@/lib/estados";
+import {
   AJUSTES_PREDETERMINADOS,
   type AjustesApp,
   type CategoriaFinanza,
   type CategoriaFinanzaInput,
   type EntradaBitacora,
+  type EstadoEmpresa,
   type EstadoTarea,
   type EventoCalendario,
   type EventoInput,
@@ -93,6 +100,13 @@ interface Fase2ContextValor {
   // Bitácora (auditoría transversal)
   bitacora: EntradaBitacora[];
   anotarBitacora: (entrada: NuevaEntradaBitacora) => Promise<void>;
+
+  // Personalización de estados de oportunidad
+  estados: EstadoOportunidad[];
+  estadosConfig: Record<EstadoEmpresa, EstadoResuelto>;
+  guardarEstadoOportunidad: (
+    input: EstadoOportunidadInput,
+  ) => Promise<EstadoOportunidad | null>;
 }
 
 const Fase2Context = createContext<Fase2ContextValor | null>(null);
@@ -109,6 +123,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [ajustes, setAjustes] = useState<AjustesApp>(AJUSTES_PREDETERMINADOS);
   const [bitacora, setBitacora] = useState<EntradaBitacora[]>([]);
+  const [estados, setEstados] = useState<EstadoOportunidad[]>([]);
   const [cargando, setCargando] = useState(true);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +139,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     setCargando(true);
     setError(null);
     try {
-      const [t, c, m, ev, p, aj, bit] = await Promise.all([
+      const [t, c, m, ev, p, aj, bit, est] = await Promise.all([
         repo.listTareas(),
         repo.listCategorias(),
         repo.listMovimientos(),
@@ -132,6 +147,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         repo.obtenerPerfil(),
         repo.obtenerAjustes(),
         repo.listBitacora(200),
+        repo.listEstados(),
       ]);
       if (!montado.current) return;
       setTareas(t);
@@ -140,6 +156,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
       setEventos(ev);
       setAjustes(aj);
       setBitacora(bit);
+      setEstados(est);
 
       // Si no hay perfil todavía, se crea uno mínimo con el correo de la sesión.
       if (p) {
@@ -542,6 +559,25 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     [repo, conProceso],
   );
 
+  const estadosConfig = useMemo(() => resolverEstados(estados), [estados]);
+
+  const guardarEstadoOportunidad = useCallback(
+    (input: EstadoOportunidadInput) =>
+      conProceso(
+        async () => {
+          const e = await repo.guardarEstado(input);
+          setEstados((prev) => {
+            const resto = prev.filter((x) => x.clave !== e.clave);
+            return [...resto, e];
+          });
+          return e;
+        },
+        "", // el llamador (Configuración) muestra un único aviso
+        "No se pudo actualizar el estado",
+      ),
+    [repo, conProceso],
+  );
+
   const guardarAjustes = useCallback(
     async (nuevos: AjustesApp) => {
       const previo = ajustes;
@@ -596,6 +632,9 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     guardarAjustes,
     bitacora,
     anotarBitacora: anotar,
+    estados,
+    estadosConfig,
+    guardarEstadoOportunidad,
   };
 
   return (

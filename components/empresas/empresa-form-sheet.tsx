@@ -25,8 +25,9 @@ import { Field } from "@/components/empresas/field";
 import { ContactosEditor } from "@/components/empresas/contactos-editor";
 import { cn } from "@/lib/utils";
 import { ESTADO_CONFIG } from "@/lib/constants";
+import { useFase2 } from "@/lib/hooks/use-fase2";
+import { clavesOrdenadas } from "@/lib/estados";
 import {
-  ESTADOS,
   type BorradorContacto,
   type Empresa,
   type EmpresaInput,
@@ -76,6 +77,8 @@ export function EmpresaFormSheet({
   procesando,
 }: EmpresaFormSheetProps) {
   const esEdicion = empresa !== null;
+  const { estadosConfig } = useFase2();
+  const clavesEstado = clavesOrdenadas(estadosConfig);
   const [datos, setDatos] = useState<EmpresaInput>(() => estadoInicial(empresa));
   const [montoTexto, setMontoTexto] = useState(() =>
     montoATextoEntrada(empresa?.montoResultado ?? null),
@@ -207,26 +210,35 @@ export function EmpresaFormSheet({
                   <SelectValue placeholder="Selecciona un estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ESTADOS.map((opcion) => (
-                    <SelectItem
-                      key={opcion}
-                      value={opcion}
-                      className={cn(
-                        datos.estado === opcion &&
-                          ESTADO_CONFIG[opcion].fondoSuave,
-                      )}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            ESTADO_CONFIG[opcion].dot,
-                          )}
-                        />
-                        {opcion}
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {clavesEstado.map((opcion) => {
+                    const r = estadosConfig[opcion];
+                    return (
+                      <SelectItem
+                        key={opcion}
+                        value={opcion}
+                        className={cn(
+                          datos.estado === opcion &&
+                            !r?.personalizado &&
+                            ESTADO_CONFIG[opcion].fondoSuave,
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              !r?.personalizado && ESTADO_CONFIG[opcion].dot,
+                            )}
+                            style={
+                              r?.personalizado
+                                ? { backgroundColor: r.color }
+                                : undefined
+                            }
+                          />
+                          {r?.etiqueta ?? opcion}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </Field>

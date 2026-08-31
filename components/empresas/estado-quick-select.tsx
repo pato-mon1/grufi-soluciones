@@ -2,7 +2,9 @@
 
 import { cn } from "@/lib/utils";
 import { ESTADO_CONFIG } from "@/lib/constants";
-import { ESTADOS, type EstadoEmpresa } from "@/lib/types";
+import { useFase2 } from "@/lib/hooks/use-fase2";
+import { clavesOrdenadas } from "@/lib/estados";
+import { type EstadoEmpresa } from "@/lib/types";
 import {
   Select,
   SelectContent,
@@ -25,6 +27,27 @@ export function EstadoQuickSelect({
   disabled,
   className,
 }: EstadoQuickSelectProps) {
+  const { estadosConfig } = useFase2();
+  const claves = clavesOrdenadas(estadosConfig);
+  const actual = estadosConfig[estado];
+
+  const punto = (clave: EstadoEmpresa) => {
+    const r = estadosConfig[clave];
+    return r?.personalizado ? (
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{ backgroundColor: r.color }}
+      />
+    ) : (
+      <span
+        className={cn(
+          "h-1.5 w-1.5 shrink-0 rounded-full",
+          ESTADO_CONFIG[clave].dot,
+        )}
+      />
+    );
+  };
+
   return (
     <Select
       value={estado}
@@ -39,34 +62,25 @@ export function EstadoQuickSelect({
         aria-label="Cambiar estado"
       >
         <span className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              "h-1.5 w-1.5 shrink-0 rounded-full",
-              ESTADO_CONFIG[estado].dot,
-            )}
-          />
-          <SelectValue />
+          {punto(estado)}
+          <SelectValue>{actual?.etiqueta ?? estado}</SelectValue>
         </span>
       </SelectTrigger>
       <SelectContent>
-        {ESTADOS.map((opcion) => (
+        {claves.map((clave) => (
           <SelectItem
-            key={opcion}
-            value={opcion}
+            key={clave}
+            value={clave}
             className={cn(
               "text-xs",
-              // Opción seleccionada: su fondo suave correspondiente.
-              opcion === estado && ESTADO_CONFIG[opcion].fondoSuave,
+              clave === estado &&
+                !estadosConfig[clave]?.personalizado &&
+                ESTADO_CONFIG[clave].fondoSuave,
             )}
           >
             <span className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  ESTADO_CONFIG[opcion].dot,
-                )}
-              />
-              {opcion}
+              {punto(clave)}
+              {estadosConfig[clave]?.etiqueta ?? clave}
             </span>
           </SelectItem>
         ))}

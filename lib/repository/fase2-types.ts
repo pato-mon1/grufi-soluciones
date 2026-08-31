@@ -13,6 +13,10 @@ import type {
   Tarea,
   TareaInput,
 } from "@/lib/types";
+import type {
+  EstadoOportunidad,
+  EstadoOportunidadInput,
+} from "@/lib/estados";
 
 /**
  * Contrato de acceso a datos de los módulos de la Fase 2
@@ -68,4 +72,8 @@ export interface Fase2Repository {
   // ── Bitácora (auditoría, solo se agregan entradas) ──
   listBitacora(limite?: number): Promise<EntradaBitacora[]>;
   registrarBitacora(entrada: NuevaEntradaBitacora): Promise<void>;
+
+  // ── Personalización de estados de oportunidad ──
+  listEstados(): Promise<EstadoOportunidad[]>;
+  guardarEstado(input: EstadoOportunidadInput): Promise<EstadoOportunidad>;
 }

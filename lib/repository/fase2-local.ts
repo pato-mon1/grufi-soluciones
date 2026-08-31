@@ -2,11 +2,16 @@ import {
   STORAGE_KEY_AJUSTES,
   STORAGE_KEY_BITACORA,
   STORAGE_KEY_CATEGORIAS,
+  STORAGE_KEY_ESTADOS,
   STORAGE_KEY_EVENTOS,
   STORAGE_KEY_MOVIMIENTOS,
   STORAGE_KEY_PERFIL,
   STORAGE_KEY_TAREAS,
 } from "@/lib/constants";
+import type {
+  EstadoOportunidad,
+  EstadoOportunidadInput,
+} from "@/lib/estados";
 import { generarId } from "@/lib/utils";
 import {
   AJUSTES_PREDETERMINADOS,
@@ -329,6 +334,33 @@ class Fase2LocalRepository implements Fase2Repository {
     };
     // Se conservan como máximo las 500 entradas más recientes.
     escribir(STORAGE_KEY_BITACORA, [nueva, ...lista].slice(0, 500));
+  }
+
+  // ── Estados de oportunidad ──
+
+  async listEstados(): Promise<EstadoOportunidad[]> {
+    return demora(leer<EstadoOportunidad>(STORAGE_KEY_ESTADOS));
+  }
+
+  async guardarEstado(
+    input: EstadoOportunidadInput,
+  ): Promise<EstadoOportunidad> {
+    const lista = leer<EstadoOportunidad>(STORAGE_KEY_ESTADOS);
+    const marca = ahora();
+    const indice = lista.findIndex((x) => x.clave === input.clave);
+    const guardado: EstadoOportunidad = {
+      clave: input.clave,
+      etiqueta: input.etiqueta.trim(),
+      color: input.color,
+      orden: input.orden,
+      fechaCreacion:
+        indice === -1 ? marca : lista[indice].fechaCreacion,
+      fechaActualizacion: marca,
+    };
+    if (indice === -1) lista.push(guardado);
+    else lista[indice] = guardado;
+    escribir(STORAGE_KEY_ESTADOS, lista);
+    return demora(guardado);
   }
 }
 

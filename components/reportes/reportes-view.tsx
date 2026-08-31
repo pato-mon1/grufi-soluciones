@@ -22,11 +22,13 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { EstadoBadge } from "@/components/empresas/estado-badge";
+import { useFase2 } from "@/lib/hooks/use-fase2";
+import { clavesOrdenadas } from "@/lib/estados";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { ESTADO_CONFIG } from "@/lib/constants";
 import { hoyISO } from "@/lib/date";
 import { formatearMonto } from "@/lib/money";
-import { ESTADOS, type EstadoEmpresa } from "@/lib/types";
+import { type EstadoEmpresa } from "@/lib/types";
 import {
   calcularMetricasComerciales,
   empresasPorEstado,
@@ -75,6 +77,8 @@ const ESTADOS_ABIERTOS: EstadoEmpresa[] = [
 
 export function ReportesView() {
   const { empresas, cargando } = useEmpresas();
+  const { estadosConfig } = useFase2();
+  const clavesEstado = clavesOrdenadas(estadosConfig);
   const hoy = hoyISO();
 
   const [desde, setDesde] = useState(() => restarDias(hoy, 90));
@@ -266,7 +270,7 @@ export function ReportesView() {
             <Skeleton className="h-40 w-full" />
           ) : (
             <ul className="space-y-2">
-              {ESTADOS.map((estado) => {
+              {clavesEstado.map((estado) => {
                 const cantidad = porEstado[estado];
                 return (
                   <li key={estado} className="text-sm">
@@ -278,7 +282,7 @@ export function ReportesView() {
                             ESTADO_CONFIG[estado].dot,
                           )}
                         />
-                        {estado}
+                        {estadosConfig[estado]?.etiqueta ?? estado}
                       </span>
                       <span className="tabular-nums text-muted-foreground">
                         {cantidad}

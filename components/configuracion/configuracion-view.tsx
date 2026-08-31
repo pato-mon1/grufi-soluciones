@@ -12,6 +12,7 @@ import {
   LogOut,
   ShieldAlert,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,11 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { getFase2Repository, getRepository } from "@/lib/repository";
 import { clasificarSeguimiento } from "@/lib/seguimientos";
 import { tareaVencida } from "@/lib/tareas";
+import {
+  clavesOrdenadas,
+  type EstadoOportunidadInput,
+  type EstadoResuelto,
+} from "@/lib/estados";
 import { formatearFechaHora, hoyISO } from "@/lib/date";
 import { formatearMonto, montoATextoEntrada, parsearMonto } from "@/lib/money";
 import {
@@ -53,6 +59,7 @@ import {
   ROLES_PERFIL,
   type AjustesApp,
   type EntradaBitacora,
+  type EstadoEmpresa,
   type RolPerfil,
 } from "@/lib/types";
 
@@ -73,9 +80,11 @@ export function ConfiguracionView() {
     movimientos,
     eventos,
     bitacora,
+    estadosConfig,
     procesando,
     guardarPerfil,
     guardarAjustes,
+    guardarEstadoOportunidad,
     anotarBitacora,
     recargar: recargarFase2,
   } = useFase2();
@@ -258,6 +267,12 @@ export function ConfiguracionView() {
       />
 
       <SeccionAjustes ajustes={ajustes} onGuardar={guardarAjustes} />
+
+      <SeccionEstados
+        config={estadosConfig}
+        procesando={procesando}
+        onGuardar={guardarEstadoOportunidad}
+      />
 
       <SeccionNotificaciones
         ajustes={ajustes}
@@ -468,6 +483,137 @@ function SeccionAjustes({
         </Field>
       </div>
       <Button onClick={guardar}>Guardar ajustes</Button>
+    </TarjetaSeccion>
+  );
+}
+
+const PALETA_ESTADO = [
+  "#64748B",
+  "#D97706",
+  "#2563EB",
+  "#7C3AED",
+  "#3F7D62",
+  "#9B4F55",
+  "#0EA5E9",
+  "#DB2777",
+];
+
+function SeccionEstados({
+  config,
+  procesando,
+  onGuardar,
+}: {
+  config: Record<EstadoEmpresa, EstadoResuelto>;
+  procesando: boolean;
+  onGuardar: (input: EstadoOportunidadInput) => Promise<unknown>;
+}) {
+  const claves = clavesOrdenadas(config);
+  type Fila = { etiqueta: string; color: string; orden: number };
+  const [draft, setDraft] = useState<Record<string, Fila>>({});
+
+  useEffect(() => {
+    const inicial: Record<string, Fila> = {};
+    for (const k of claves) {
+      inicial[k] = {
+        etiqueta: config[k].etiqueta,
+        color: config[k].color,
+        orden: config[k].orden,
+      };
+    }
+    setDraft(inicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config]);
+
+  function set(clave: string, cambios: Partial<Fila>) {
+    setDraft((prev) => ({ ...prev, [clave]: { ...prev[clave], ...cambios } }));
+  }
+
+  async function guardar() {
+    const objetivos = claves.filter((k) => {
+      const d = draft[k];
+      return (
+        d &&
+        (d.etiqueta.trim() !== config[k].etiqueta ||
+          d.color !== config[k].color ||
+          d.orden !== config[k].orden)
+      );
+    });
+    if (objetivos.length === 0) {
+      toast.info("No hay cambios que guardar.");
+      return;
+    }
+    for (const k of objetivos) {
+      const d = draft[k];
+      if (!d.etiqueta.trim()) {
+        toast.error("Ningún estado puede quedarse sin nombre.");
+        return;
+      }
+      await onGuardar({
+        clave: k as EstadoEmpresa,
+        etiqueta: d.etiqueta.trim(),
+        color: d.color,
+        orden: d.orden,
+      });
+    }
+    toast.success("Estados actualizados");
+  }
+
+  return (
+    <TarjetaSeccion
+      titulo="Estados de oportunidad"
+      descripcion="Cambia el nombre visible, el color y el orden de los 6 estados. El valor guardado internamente y su carácter de cierre/ganada no cambian."
+    >
+      <div className="space-y-2">
+        {claves.map((k) => {
+          const d = draft[k] ?? {
+            etiqueta: config[k].etiqueta,
+            color: config[k].color,
+            orden: config[k].orden,
+          };
+          return (
+            <div
+              key={k}
+              className="flex flex-wrap items-center gap-2 rounded-md border p-2"
+            >
+              <div className="flex items-center gap-1">
+                {PALETA_ESTADO.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`Color ${c} para ${k}`}
+                    onClick={() => set(k, { color: c })}
+                    className={cn(
+                      "h-5 w-5 rounded-full border-2",
+                      d.color === c ? "border-foreground" : "border-transparent",
+                    )}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+              <Input
+                value={d.etiqueta}
+                onChange={(e) => set(k, { etiqueta: e.target.value })}
+                className="h-8 min-w-[140px] flex-1"
+                aria-label={`Nombre del estado ${k}`}
+              />
+              <Input
+                type="number"
+                value={d.orden}
+                onChange={(e) => set(k, { orden: Number(e.target.value) || 0 })}
+                className="h-8 w-16"
+                aria-label={`Orden del estado ${k}`}
+              />
+              <span className="w-full text-[11px] text-muted-foreground sm:w-auto">
+                interno: {k}
+                {config[k].cerrado ? " · cierre" : ""}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <Button onClick={guardar} disabled={procesando}>
+        Guardar estados
+      </Button>
     </TarjetaSeccion>
   );
 }

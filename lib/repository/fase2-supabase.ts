@@ -2,11 +2,16 @@ import {
   SUPABASE_TABLE_AJUSTES,
   SUPABASE_TABLE_BITACORA,
   SUPABASE_TABLE_CATEGORIAS,
+  SUPABASE_TABLE_ESTADOS,
   SUPABASE_TABLE_EVENTOS,
   SUPABASE_TABLE_MOVIMIENTOS,
   SUPABASE_TABLE_PERFILES,
   SUPABASE_TABLE_TAREAS,
 } from "@/lib/constants";
+import type {
+  EstadoOportunidad,
+  EstadoOportunidadInput,
+} from "@/lib/estados";
 import { getSupabaseClient, getUsuarioActual } from "@/lib/supabase/client";
 import {
   AJUSTES_PREDETERMINADOS,
@@ -523,6 +528,71 @@ class Fase2SupabaseRepository implements Fase2Repository {
       resumen: entrada.resumen,
     });
     if (error) throw new Error(error.message);
+  }
+
+  // Estados de oportunidad
+
+  async listEstados(): Promise<EstadoOportunidad[]> {
+    const { data, error } = await this.sb
+      .from(SUPABASE_TABLE_ESTADOS)
+      .select("*")
+      .order("orden", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (
+      data as Array<{
+        clave: EstadoOportunidad["clave"];
+        etiqueta: string;
+        color: string | null;
+        orden: number | string | null;
+        fecha_creacion: string;
+        fecha_actualizacion: string;
+      }>
+    ).map((f) => ({
+      clave: f.clave,
+      etiqueta: f.etiqueta,
+      color: f.color ?? "#64748B",
+      orden: num(f.orden),
+      fechaCreacion: f.fecha_creacion,
+      fechaActualizacion: f.fecha_actualizacion,
+    }));
+  }
+
+  async guardarEstado(
+    input: EstadoOportunidadInput,
+  ): Promise<EstadoOportunidad> {
+    const u = await getUsuarioActual();
+    if (!u?.id) throw new Error("No hay una sesión activa.");
+    const { data, error } = await this.sb
+      .from(SUPABASE_TABLE_ESTADOS)
+      .upsert(
+        {
+          user_id: u.id,
+          clave: input.clave,
+          etiqueta: input.etiqueta.trim(),
+          color: input.color,
+          orden: input.orden,
+        },
+        { onConflict: "user_id,clave" },
+      )
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    const f = data as {
+      clave: EstadoOportunidad["clave"];
+      etiqueta: string;
+      color: string | null;
+      orden: number | string | null;
+      fecha_creacion: string;
+      fecha_actualizacion: string;
+    };
+    return {
+      clave: f.clave,
+      etiqueta: f.etiqueta,
+      color: f.color ?? "#64748B",
+      orden: num(f.orden),
+      fechaCreacion: f.fecha_creacion,
+      fechaActualizacion: f.fecha_actualizacion,
+    };
   }
 }
 

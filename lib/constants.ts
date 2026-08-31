@@ -103,6 +103,7 @@ export const SUPABASE_TABLE_EVENTOS = "eventos_calendario";
 export const SUPABASE_TABLE_PERFILES = "perfiles";
 export const SUPABASE_TABLE_AJUSTES = "ajustes_app";
 export const SUPABASE_TABLE_BITACORA = "bitacora";
+export const SUPABASE_TABLE_ESTADOS = "estados_oportunidad";
 
 /** Claves de localStorage para los módulos de la Fase 2. */
 export const STORAGE_KEY_TAREAS = "seguimiento-tareas:v1";
@@ -112,6 +113,7 @@ export const STORAGE_KEY_EVENTOS = "seguimiento-eventos:v1";
 export const STORAGE_KEY_PERFIL = "seguimiento-perfil:v1";
 export const STORAGE_KEY_AJUSTES = "seguimiento-ajustes:v1";
 export const STORAGE_KEY_BITACORA = "seguimiento-bitacora:v1";
+export const STORAGE_KEY_ESTADOS = "seguimiento-estados-oportunidad:v1";
 
 /** Icono (lucide) y tono para cada tipo de actividad del historial. */
 export const ACTIVIDAD_CONFIG: Record<
