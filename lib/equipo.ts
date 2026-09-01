@@ -14,6 +14,12 @@ export interface MiembroOrg {
   correo: string;
   rol: RolPerfil;
   fechaCreacion: string;
+  // Del perfil (pueden faltar si el perfil aún no existe):
+  nombre: string;
+  puesto: string;
+  estado: "activo" | "inactivo" | "pendiente";
+  rolGeneral: string;
+  ultimoAcceso: string | null;
 }
 
 export interface Invitacion {
