@@ -37,6 +37,9 @@ import {
 } from "@/lib/reportes";
 
 /** Resta `dias` días a una fecha YYYY-MM-DD (horario local). */
+/** Fecha máxima seleccionable en los filtros (permite proyectar a futuro). */
+const FECHA_MAXIMA = "2035-12-31";
+
 function restarDias(iso: string, dias: number): string {
   const base = new Date(`${iso}T00:00:00`).getTime();
   return new Date(base - dias * 86_400_000).toISOString().slice(0, 10);
@@ -202,7 +205,7 @@ export function ReportesView() {
             type="date"
             value={hasta}
             min={desde}
-            max={hoy}
+            max={FECHA_MAXIMA}
             onChange={(e) => setHasta(e.target.value)}
           />
         </label>
