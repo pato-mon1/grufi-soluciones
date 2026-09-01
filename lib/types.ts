@@ -350,6 +350,8 @@ export interface AjustesApp {
   notifSeguimientosDias: number;
   notifTareasDias: number;
   notifCobrosDias: number;
+  /** Horas de anticipación para el recordatorio de tareas próximas a vencer. */
+  notifTareasHoras: number;
 }
 
 export const AJUSTES_PREDETERMINADOS: AjustesApp = {
@@ -360,6 +362,7 @@ export const AJUSTES_PREDETERMINADOS: AjustesApp = {
   notifSeguimientosDias: 3,
   notifTareasDias: 2,
   notifCobrosDias: 3,
+  notifTareasHoras: 24,
 };
 
 // ────────────────────────────────────────────────────────────

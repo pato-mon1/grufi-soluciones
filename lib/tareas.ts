@@ -123,6 +123,67 @@ export function siguienteOrden(
   return Math.max(...enColumna.map((t) => t.orden)) + 1;
 }
 
+// ────────────────────────────────────────────────────────────
+// Permisos (espejo de las políticas RLS; la BD es la barrera real)
+// ────────────────────────────────────────────────────────────
+
+/** El responsable o el creador/admin pueden avanzar y cambiar el estado. */
+export function puedeAvanzarTarea(
+  tarea: Pick<Tarea, "asignadoA" | "creadoPor">,
+  userId: string | null | undefined,
+  esAdmin: boolean,
+): boolean {
+  if (!userId) return false;
+  if (esAdmin) return true;
+  if (tarea.asignadoA === userId) return true;
+  return tarea.creadoPor === userId;
+}
+
+/** El creador o un admin pueden editar todo, reasignar, fechas y prioridad. */
+export function puedeEditarTarea(
+  tarea: Pick<Tarea, "creadoPor">,
+  userId: string | null | undefined,
+  esAdmin: boolean,
+): boolean {
+  if (!userId) return false;
+  if (esAdmin) return true;
+  return tarea.creadoPor === userId;
+}
+
+/** Solo el creador o un admin pueden eliminar. */
+export const puedeEliminarTarea = puedeEditarTarea;
+
+// ────────────────────────────────────────────────────────────
+// Recordatorios (evitar duplicados)
+// ────────────────────────────────────────────────────────────
+
+interface NotifMinima {
+  tipo: string;
+  tareaId: string | null;
+  fechaCreacion: string;
+}
+
+/**
+ * ¿Debe generarse un recordatorio de `tipo` para `tareaId`?
+ * `false` si ya existe uno del mismo tipo para esa tarea dentro de
+ * `ventanaHoras` (por defecto 20 h). Evita duplicados entre ejecuciones.
+ */
+export function debeRecordar(
+  existentes: NotifMinima[],
+  tareaId: string,
+  tipo: string,
+  ahora: Date = new Date(),
+  ventanaHoras = 20,
+): boolean {
+  const limite = ahora.getTime() - ventanaHoras * 3_600_000;
+  return !existentes.some(
+    (n) =>
+      n.tareaId === tareaId &&
+      n.tipo === tipo &&
+      new Date(n.fechaCreacion).getTime() >= limite,
+  );
+}
+
 /** Avance implícito según el estado (para mostrar cuando progreso = 0). */
 export function progresoDeEstado(estado: EstadoTarea): number {
   switch (estado) {

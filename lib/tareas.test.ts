@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   agruparPorEstado,
   completadaEstaSemana,
+  debeRecordar,
+  puedeAvanzarTarea,
+  puedeEditarTarea,
+  puedeEliminarTarea,
   resumirTareas,
   siguienteOrden,
   tareaParaHoy,
@@ -110,6 +114,92 @@ describe("resumirTareas", () => {
     expect(r.completadas).toBe(1);
     expect(r.pendientes).toBe(4);
     expect(r.vencidas).toBe(1);
+  });
+});
+
+describe("permisos", () => {
+  const tarea = crearTarea({ creadoPor: "creador", asignadoA: "resp" });
+
+  it("el responsable puede avanzar pero no editar todo", () => {
+    expect(puedeAvanzarTarea(tarea, "resp", false)).toBe(true);
+    expect(puedeEditarTarea(tarea, "resp", false)).toBe(false);
+  });
+
+  it("el creador puede editar y eliminar", () => {
+    expect(puedeEditarTarea(tarea, "creador", false)).toBe(true);
+    expect(puedeEliminarTarea(tarea, "creador", false)).toBe(true);
+  });
+
+  it("un admin puede todo", () => {
+    expect(puedeEditarTarea(tarea, "otro", true)).toBe(true);
+    expect(puedeAvanzarTarea(tarea, "otro", true)).toBe(true);
+  });
+
+  it("un usuario sin relación no puede editar ni eliminar", () => {
+    expect(puedeEditarTarea(tarea, "extraño", false)).toBe(false);
+    expect(puedeEliminarTarea(tarea, "extraño", false)).toBe(false);
+    expect(puedeAvanzarTarea(tarea, "extraño", false)).toBe(false);
+  });
+
+  it("sin sesión no puede nada", () => {
+    expect(puedeEditarTarea(tarea, null, false)).toBe(false);
+    expect(puedeAvanzarTarea(tarea, undefined, true)).toBe(false);
+  });
+});
+
+describe("debeRecordar", () => {
+  const AHORA = new Date("2026-09-05T12:00:00.000Z");
+
+  it("permite el recordatorio si no hay uno reciente del mismo tipo", () => {
+    expect(debeRecordar([], "t1", "vence_pronto", AHORA)).toBe(true);
+    expect(
+      debeRecordar(
+        [
+          {
+            tipo: "vencida",
+            tareaId: "t1",
+            fechaCreacion: "2026-09-05T11:00:00.000Z",
+          },
+        ],
+        "t1",
+        "vence_pronto",
+        AHORA,
+      ),
+    ).toBe(true);
+  });
+
+  it("lo bloquea si ya hay uno dentro de la ventana", () => {
+    expect(
+      debeRecordar(
+        [
+          {
+            tipo: "vence_pronto",
+            tareaId: "t1",
+            fechaCreacion: "2026-09-05T01:00:00.000Z",
+          },
+        ],
+        "t1",
+        "vence_pronto",
+        AHORA,
+      ),
+    ).toBe(false);
+  });
+
+  it("permite de nuevo si el anterior quedó fuera de la ventana", () => {
+    expect(
+      debeRecordar(
+        [
+          {
+            tipo: "vence_pronto",
+            tareaId: "t1",
+            fechaCreacion: "2026-09-03T12:00:00.000Z",
+          },
+        ],
+        "t1",
+        "vence_pronto",
+        AHORA,
+      ),
+    ).toBe(true);
   });
 });
 

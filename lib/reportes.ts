@@ -1,6 +1,7 @@
-import type { Empresa, EstadoEmpresa } from "@/lib/types";
+import type { Empresa, EstadoEmpresa, Tarea } from "@/lib/types";
 import { ESTADO_CONFIG } from "@/lib/constants";
 import { hoyISO } from "@/lib/date";
+import { tareaVencida } from "@/lib/tareas";
 
 export const ESTADO_GANADA: EstadoEmpresa = "Cerrada - Ganada";
 export const ESTADO_PERDIDA: EstadoEmpresa = "Cerrada - No concretada";
@@ -160,6 +161,36 @@ export function filasDetalle(
       diasEnProceso: diasEnProceso(e, hoy),
     }))
     .sort((a, b) => (b.monto ?? 0) - (a.monto ?? 0));
+}
+
+export interface MetricasTareas {
+  creadas: number;
+  completadas: number;
+  vencidas: number;
+  abiertas: number;
+}
+
+/** Tareas creadas / completadas dentro del rango + vencidas y abiertas al momento. */
+export function metricasTareas(
+  tareas: Tarea[],
+  rango: RangoFechas,
+): MetricasTareas {
+  let creadas = 0;
+  let completadas = 0;
+  let vencidas = 0;
+  let abiertas = 0;
+  for (const t of tareas) {
+    const creada = t.fechaCreacion.slice(0, 10);
+    if (creada >= rango.desde && creada <= rango.hasta) creadas += 1;
+    if (t.estado === "completada" && t.fechaCompletada) {
+      const comp = t.fechaCompletada.slice(0, 10);
+      if (comp >= rango.desde && comp <= rango.hasta) completadas += 1;
+    } else {
+      abiertas += 1;
+      if (tareaVencida(t)) vencidas += 1;
+    }
+  }
+  return { creadas, completadas, vencidas, abiertas };
 }
 
 function redondear1(n: number): number {

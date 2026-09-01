@@ -30,7 +30,12 @@ import {
 } from "@/components/ui/select";
 import { Avatar, SelectorUsuario } from "@/components/tareas/selector-usuario";
 import { describirActividad } from "@/lib/actividad-tarea";
-import { COLUMNAS_TAREA, ETIQUETA_PRIORIDAD } from "@/lib/tareas";
+import {
+  COLUMNAS_TAREA,
+  ETIQUETA_PRIORIDAD,
+  puedeAvanzarTarea,
+  puedeEditarTarea,
+} from "@/lib/tareas";
 import { formatearFechaHora } from "@/lib/date";
 import {
   ETIQUETA_ESTADO_TAREA,
@@ -100,11 +105,8 @@ export function PanelDetalleTarea({
       (id && (m.get(id) || (id === "local" ? "Yo" : null))) || "Alguien";
   }, [miembros]);
 
-  const soyResponsable = tarea.asignadoA === miUserId;
-  const soyCreador =
-    tarea.creadoPor === miUserId || (tarea.creadoPor == null && !!miUserId);
-  const puedeEditarTodo = soyCreador || soyAdmin;
-  const puedeAvanzar = soyResponsable || puedeEditarTodo;
+  const puedeEditarTodo = puedeEditarTarea(tarea, miUserId, soyAdmin);
+  const puedeAvanzar = puedeAvanzarTarea(tarea, miUserId, soyAdmin);
   const completada = tarea.estado === "completada";
 
   const subs = subtareas

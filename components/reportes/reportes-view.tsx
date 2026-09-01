@@ -33,6 +33,7 @@ import {
   calcularMetricasComerciales,
   empresasPorEstado,
   filasDetalle,
+  metricasTareas,
   type RangoFechas,
 } from "@/lib/reportes";
 
@@ -80,7 +81,7 @@ const ESTADOS_ABIERTOS: EstadoEmpresa[] = [
 
 export function ReportesView() {
   const { empresas, cargando } = useEmpresas();
-  const { estadosConfig } = useFase2();
+  const { estadosConfig, tareas } = useFase2();
   const clavesEstado = clavesOrdenadas(estadosConfig);
   const hoy = hoyISO();
 
@@ -94,6 +95,11 @@ export function ReportesView() {
     () => calcularMetricasComerciales(empresas, rango),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [empresas, desde, hasta],
+  );
+  const mTareas = useMemo(
+    () => metricasTareas(tareas, rango),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tareas, desde, hasta],
   );
   const porEstado = useMemo(() => empresasPorEstado(empresas), [empresas]);
   const filas = useMemo(() => filasDetalle(empresas, hoy), [empresas, hoy]);
@@ -264,6 +270,31 @@ export function ReportesView() {
           </Card>
         ))}
       </div>
+
+      {/* Tareas del periodo */}
+      <Card className="p-4 print-break-avoid">
+        <h3 className="mb-3 text-sm font-semibold">Tareas del periodo</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ["Creadas", mTareas.creadas],
+            ["Completadas", mTareas.completadas],
+            ["Abiertas", mTareas.abiertas],
+            ["Vencidas", mTareas.vencidas],
+          ].map(([etq, val]) => (
+            <div key={etq}>
+              <p
+                className={cn(
+                  "text-xl font-semibold tracking-tight",
+                  etq === "Vencidas" && Number(val) > 0 && "text-estado-perdida",
+                )}
+              >
+                {val}
+              </p>
+              <p className="text-xs text-muted-foreground">{etq}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Empresas por estado */}

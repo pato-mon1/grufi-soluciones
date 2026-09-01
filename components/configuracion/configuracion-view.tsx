@@ -946,11 +946,13 @@ function SeccionNotificaciones({
   const [seg, setSeg] = useState(ajustes.notifSeguimientosDias);
   const [tar, setTar] = useState(ajustes.notifTareasDias);
   const [cob, setCob] = useState(ajustes.notifCobrosDias);
+  const [tareasHoras, setTareasHoras] = useState(ajustes.notifTareasHoras);
 
   useEffect(() => {
     setSeg(ajustes.notifSeguimientosDias);
     setTar(ajustes.notifTareasDias);
     setCob(ajustes.notifCobrosDias);
+    setTareasHoras(ajustes.notifTareasHoras);
   }, [ajustes]);
 
   const hoy = hoyISO();
@@ -1027,6 +1029,20 @@ function SeccionNotificaciones({
             onChange={(e) => setCob(Number(e.target.value) || 0)}
           />
         </Field>
+        <Field
+          id="n-tar-h"
+          label="Tareas: aviso antes de vencer (horas)"
+          hint="El recordatorio automático se envía a esta anticipación."
+        >
+          <Input
+            id="n-tar-h"
+            type="number"
+            min={1}
+            max={168}
+            value={tareasHoras}
+            onChange={(e) => setTareasHoras(Number(e.target.value) || 24)}
+          />
+        </Field>
       </div>
 
       <div className="rounded-md border bg-muted/40 p-3">
@@ -1055,6 +1071,7 @@ function SeccionNotificaciones({
             notifSeguimientosDias: seg,
             notifTareasDias: tar,
             notifCobrosDias: cob,
+            notifTareasHoras: tareasHoras,
           })
         }
       >
