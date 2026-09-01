@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { TareasView } from "@/components/tareas/tareas-view";
 
@@ -6,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function TareasPage() {
-  return <TareasView />;
+  return (
+    <Suspense fallback={null}>
+      <TareasView />
+    </Suspense>
+  );
 }

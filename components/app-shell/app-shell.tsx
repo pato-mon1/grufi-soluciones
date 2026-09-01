@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
+import { CampanaNotificaciones } from "@/components/app-shell/campana-notificaciones";
 import {
   Sheet,
   SheetContent,
@@ -221,6 +222,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="text-sm font-semibold tracking-tight text-foreground">
             GRUFI SOLUCIONES
           </span>
+          <div className="ml-auto">
+            <CampanaNotificaciones />
+          </div>
+        </header>
+
+        {/* Barra superior (escritorio): solo la campana */}
+        <header className="sticky top-0 z-20 hidden items-center justify-end border-b bg-card px-6 py-2 lg:flex">
+          <CampanaNotificaciones />
         </header>
 
         <main className="min-w-0 flex-1">{children}</main>

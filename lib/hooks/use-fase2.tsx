@@ -11,7 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { getFase2Repository, usandoSupabase } from "@/lib/repository";
-import { getUsuarioActual } from "@/lib/supabase/client";
+import { getSupabaseClient, getUsuarioActual } from "@/lib/supabase/client";
 import {
   resolverEstados,
   type EstadoOportunidad,
@@ -197,6 +197,36 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  // Realtime: cambios de tareas hechos por otros usuarios del equipo.
+  useEffect(() => {
+    if (!esSupabase) return;
+    let temporizador: ReturnType<typeof setTimeout> | null = null;
+    const refrescar = () => {
+      if (temporizador) clearTimeout(temporizador);
+      temporizador = setTimeout(() => {
+        repo
+          .listTareas()
+          .then((t) => {
+            if (montado.current) setTareas(t);
+          })
+          .catch(() => {});
+      }, 250);
+    };
+    const sb = getSupabaseClient();
+    const canal = sb
+      .channel("tareas-equipo")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tareas" },
+        refrescar,
+      )
+      .subscribe();
+    return () => {
+      if (temporizador) clearTimeout(temporizador);
+      void sb.removeChannel(canal);
+    };
+  }, [esSupabase, repo]);
 
   // ── Helpers genéricos ──
 
