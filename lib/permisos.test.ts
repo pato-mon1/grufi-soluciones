@@ -90,6 +90,49 @@ describe("moduloDeRuta", () => {
   });
 });
 
+describe("ejemplo Cano (spec)", () => {
+  const cano = resolverPermisos(
+    [
+      { module_key: "empresas", access_level: "view" },
+      { module_key: "seguimientos", access_level: "edit" },
+      { module_key: "tareas", access_level: "edit" },
+      { module_key: "calendario", access_level: "view" },
+      { module_key: "reportes", access_level: "none" },
+      { module_key: "finanzas", access_level: "none" },
+      { module_key: "contactos", access_level: "view" },
+      { module_key: "configuracion", access_level: "none" },
+    ],
+    false,
+  );
+
+  it("no ve Finanzas, Reportes ni Configuración", () => {
+    expect(tieneAcceso(cano.finanzas, "view")).toBe(false);
+    expect(tieneAcceso(cano.reportes, "view")).toBe(false);
+    expect(tieneAcceso(cano.configuracion, "view")).toBe(false);
+  });
+
+  it("consulta Empresas y Contactos pero no los modifica", () => {
+    expect(tieneAcceso(cano.empresas, "view")).toBe(true);
+    expect(tieneAcceso(cano.empresas, "edit")).toBe(false);
+    expect(tieneAcceso(cano.contactos, "view")).toBe(true);
+    expect(tieneAcceso(cano.contactos, "edit")).toBe(false);
+  });
+
+  it("crea y actualiza tareas y seguimientos", () => {
+    expect(tieneAcceso(cano.tareas, "edit")).toBe(true);
+    expect(tieneAcceso(cano.seguimientos, "edit")).toBe(true);
+  });
+
+  it("no puede eliminar en ningún módulo (necesita manage)", () => {
+    expect(tieneAcceso(cano.tareas, "manage")).toBe(false);
+    expect(tieneAcceso(cano.seguimientos, "manage")).toBe(false);
+  });
+
+  it("su primer panel permitido es Empresas", () => {
+    expect(primeraRutaPermitida(cano)).toBe("/empresas");
+  });
+});
+
 describe("plantillas", () => {
   it("Ventas no toca Finanzas ni Reportes ni Configuración", () => {
     expect(PLANTILLAS.ventas.finanzas).toBe("none");

@@ -23,6 +23,7 @@ import {
 import { PageHeader } from "@/components/app-shell/page-header";
 import { EstadoBadge } from "@/components/empresas/estado-badge";
 import { useFase2 } from "@/lib/hooks/use-fase2";
+import { usePermisos } from "@/lib/hooks/use-permisos";
 import { clavesOrdenadas } from "@/lib/estados";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { ESTADO_CONFIG } from "@/lib/constants";
@@ -82,6 +83,8 @@ const ESTADOS_ABIERTOS: EstadoEmpresa[] = [
 export function ReportesView() {
   const { empresas, cargando } = useEmpresas();
   const { estadosConfig, tareas } = useFase2();
+  const { puede } = usePermisos();
+  const puedeExportar = puede("reportes", "manage");
   const clavesEstado = clavesOrdenadas(estadosConfig);
   const hoy = hoyISO();
 
@@ -177,20 +180,26 @@ export function ReportesView() {
         title="Reportes"
         subtitle="Indicadores comerciales del periodo seleccionado."
         action={
-          <div className="flex gap-2" data-print-hide>
-            <Button variant="outline" onClick={exportar} className="w-full sm:w-auto">
-              <Download className="h-4 w-4" />
-              Exportar CSV
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => window.print()}
-              className="w-full sm:w-auto"
-            >
-              <Printer className="h-4 w-4" />
-              Imprimir / PDF
-            </Button>
-          </div>
+          puedeExportar ? (
+            <div className="flex gap-2" data-print-hide>
+              <Button
+                variant="outline"
+                onClick={exportar}
+                className="w-full sm:w-auto"
+              >
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.print()}
+                className="w-full sm:w-auto"
+              >
+                <Printer className="h-4 w-4" />
+                Imprimir / PDF
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 

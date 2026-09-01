@@ -34,6 +34,10 @@ interface ToolbarProps {
   pendientesSeguimiento: number;
   marcadasSeguimiento: number;
   deshabilitado?: boolean;
+  /** Oculta "Importar" si es false. */
+  puedeImportar?: boolean;
+  /** Oculta "Exportar" si es false. */
+  puedeExportar?: boolean;
 }
 
 export function Toolbar({
@@ -44,6 +48,8 @@ export function Toolbar({
   pendientesSeguimiento,
   marcadasSeguimiento,
   deshabilitado,
+  puedeImportar = true,
+  puedeExportar = true,
 }: ToolbarProps) {
   const inputArchivo = useRef<HTMLInputElement>(null);
 
@@ -220,26 +226,30 @@ export function Toolbar({
           className="hidden"
           onChange={manejarArchivo}
         />
-        <Button
-          type="button"
-          variant="outline"
-          className="h-9"
-          onClick={() => inputArchivo.current?.click()}
-          disabled={deshabilitado}
-        >
-          <Upload className="h-4 w-4" />
-          Importar
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-9"
-          onClick={onExportar}
-          disabled={deshabilitado}
-        >
-          <Download className="h-4 w-4" />
-          Exportar
-        </Button>
+        {puedeImportar && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9"
+            onClick={() => inputArchivo.current?.click()}
+            disabled={deshabilitado}
+          >
+            <Upload className="h-4 w-4" />
+            Importar
+          </Button>
+        )}
+        {puedeExportar && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9"
+            onClick={onExportar}
+            disabled={deshabilitado}
+          >
+            <Download className="h-4 w-4" />
+            Exportar
+          </Button>
+        )}
       </div>
     </div>
   );

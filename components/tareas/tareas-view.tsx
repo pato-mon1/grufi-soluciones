@@ -37,6 +37,7 @@ import { PanelDetalleTarea } from "@/components/tareas/panel-detalle-tarea";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
 import { useTareasColab } from "@/lib/hooks/use-tareas-colab";
+import { usePermisos } from "@/lib/hooks/use-permisos";
 import { formatearFecha, formatearFechaHora } from "@/lib/date";
 import {
   diasDelMes,
@@ -114,6 +115,8 @@ export function TareasView() {
     eliminarTarea,
   } = useFase2();
   const colab = useTareasColab();
+  const { puede } = usePermisos();
+  const puedeEditarTareas = puede("tareas", "edit");
 
   const soyAdmin =
     miembrosEquipo.length === 0 ||
@@ -234,10 +237,15 @@ export function TareasView() {
         title="Tareas"
         subtitle="Panel colaborativo del equipo."
         action={
-          <Button className="w-full sm:w-auto" onClick={() => abrirNueva("por_hacer")}>
-            <Plus className="h-4 w-4 text-champagne" />
-            Nueva tarea
-          </Button>
+          puedeEditarTareas ? (
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => abrirNueva("por_hacer")}
+            >
+              <Plus className="h-4 w-4 text-champagne" />
+              Nueva tarea
+            </Button>
+          ) : undefined
         }
       />
 
@@ -481,8 +489,8 @@ export function TareasView() {
               ? (nombreEmpresa.get(detalle.empresaId) ?? null)
               : null
           }
-          miUserId={colab.miUserId}
-          soyAdmin={Boolean(soyAdmin)}
+          miUserId={puedeEditarTareas ? colab.miUserId : null}
+          soyAdmin={Boolean(soyAdmin) && puedeEditarTareas}
           subtareas={colab.subtareas}
           comentarios={colab.comentarios}
           actividad={colab.actividad}

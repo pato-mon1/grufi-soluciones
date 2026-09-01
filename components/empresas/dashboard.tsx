@@ -20,6 +20,7 @@ import { SeguimientoDialog } from "@/components/empresas/seguimiento-dialog";
 import { RegistrarActividadDialog } from "@/components/empresas/registrar-actividad-dialog";
 import { MigrarSupabaseDialog } from "@/components/empresas/migrar-supabase-dialog";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
+import { usePermisos } from "@/lib/hooks/use-permisos";
 import { calcularResumen, filtrarYOrdenar, type OpcionesFiltro } from "@/lib/filtros";
 import { csvAEmpresas, descargarCSV, empresasACSV } from "@/lib/csv";
 import { hoyISO } from "@/lib/date";
@@ -45,6 +46,9 @@ const ESTADOS_CON_TARJETA = new Set<string>([
 ]);
 
 export function Dashboard() {
+  const { puede } = usePermisos();
+  const puedeEditar = puede("empresas", "edit");
+  const puedeAdministrar = puede("empresas", "manage");
   const {
     empresas,
     contactos,
@@ -205,10 +209,12 @@ export function Dashboard() {
         title="Empresas"
         subtitle="Administra y consulta el avance de cada oportunidad"
         action={
-          <Button onClick={abrirNueva} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 text-champagne" />
-            Agregar empresa
-          </Button>
+          puedeEditar ? (
+            <Button onClick={abrirNueva} className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 text-champagne" />
+              Agregar empresa
+            </Button>
+          ) : undefined
         }
       />
 
@@ -226,6 +232,8 @@ export function Dashboard() {
             onOpcionesChange={setOpciones}
             onImportar={importarArchivo}
             onExportar={exportar}
+            puedeImportar={puedeEditar}
+            puedeExportar={puedeAdministrar}
             pendientesSeguimiento={resumen.seguimientoPendiente}
             marcadasSeguimiento={resumen.marcadasSeguimiento}
             deshabilitado={cargando || procesando}
@@ -262,7 +270,10 @@ export function Dashboard() {
             onAlternarRequiereSeguimiento={() => {}}
           />
         ) : empresas.length === 0 ? (
-          <EmptyState variante="sin-datos" onAgregar={abrirNueva} />
+          <EmptyState
+            variante="sin-datos"
+            onAgregar={puedeEditar ? abrirNueva : undefined}
+          />
         ) : empresasFiltradas.length === 0 ? (
           <EmptyState
             variante="sin-resultados"

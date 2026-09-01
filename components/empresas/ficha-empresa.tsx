@@ -29,6 +29,7 @@ import { ProximoSeguimientoCell } from "@/components/empresas/proximo-seguimient
 import { HistorialActividades } from "@/components/empresas/historial-actividades";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
+import { usePermisos } from "@/lib/hooks/use-permisos";
 import {
   formatearTamano,
   useArchivosEmpresa,
@@ -74,6 +75,8 @@ export function FichaEmpresa({ id }: { id: string }) {
     actualizarTarea,
     eliminarTarea,
   } = useFase2();
+  const { puede } = usePermisos();
+  const puedeVerContactos = puede("contactos", "view");
   const archivos = useArchivosEmpresa(id);
   const inputArchivoRef = useRef<HTMLInputElement>(null);
 
@@ -498,6 +501,7 @@ export function FichaEmpresa({ id }: { id: string }) {
           </Card>
 
           {/* Contactos */}
+          {puedeVerContactos && (
           <Card className="space-y-2 p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">
@@ -562,6 +566,7 @@ export function FichaEmpresa({ id }: { id: string }) {
               </ul>
             )}
           </Card>
+          )}
 
           <Button
             asChild
