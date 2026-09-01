@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   CalendarClock,
   Check,
+  Download,
   Mail,
   MessageCircle,
+  Paperclip,
   Phone,
   Plus,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,6 +29,10 @@ import { ProximoSeguimientoCell } from "@/components/empresas/proximo-seguimient
 import { HistorialActividades } from "@/components/empresas/historial-actividades";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
+import {
+  formatearTamano,
+  useArchivosEmpresa,
+} from "@/lib/hooks/use-archivos-empresa";
 import { formatearFecha, hoyISO } from "@/lib/date";
 import { siguienteOrden } from "@/lib/tareas";
 import type { TipoActividad } from "@/lib/types";
@@ -67,6 +74,8 @@ export function FichaEmpresa({ id }: { id: string }) {
     actualizarTarea,
     eliminarTarea,
   } = useFase2();
+  const archivos = useArchivosEmpresa(id);
+  const inputArchivoRef = useRef<HTMLInputElement>(null);
 
   const empresa = useMemo(
     () => empresas.find((e) => e.id === id) ?? null,
@@ -375,6 +384,94 @@ export function FichaEmpresa({ id }: { id: string }) {
                 );
               })}
             </ul>
+          </Card>
+
+          {/* Archivos */}
+          <Card className="space-y-2 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                <Paperclip className="h-4 w-4" />
+                Archivos ({archivos.archivos.length})
+              </h3>
+              {archivos.disponible && (
+                <>
+                  <input
+                    ref={inputArchivoRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files?.length) {
+                        void archivos.subir(e.target.files);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={archivos.subiendo}
+                    onClick={() => inputArchivoRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {archivos.subiendo ? "Subiendo…" : "Subir"}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {!archivos.disponible ? (
+              <p className="text-xs text-muted-foreground">
+                Los archivos requieren el modo Nube (Supabase).
+              </p>
+            ) : archivos.cargando ? (
+              <div className="space-y-1">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            ) : archivos.archivos.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Aún no hay archivos. Sube contratos, propuestas, minutas…
+                (máx. 25 MB cada uno).
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {archivos.archivos.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm"
+                  >
+                    <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">
+                        {a.nombre}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {formatearTamano(a.tamano)} · {formatearFecha(a.fechaCreacion)}
+                      </span>
+                    </span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      aria-label={`Descargar ${a.nombre}`}
+                      onClick={() => void archivos.descargar(a)}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      aria-label={`Eliminar ${a.nombre}`}
+                      onClick={() => void archivos.eliminar(a)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           {/* Notas generales */}
