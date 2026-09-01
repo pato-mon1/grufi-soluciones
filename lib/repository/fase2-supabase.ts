@@ -16,22 +16,28 @@ import { getSupabaseClient, getUsuarioActual } from "@/lib/supabase/client";
 import {
   AJUSTES_PREDETERMINADOS,
   type AccionBitacora,
+  type ActividadTarea,
   type AjustesApp,
   type CategoriaFinanza,
   type CategoriaFinanzaInput,
+  type ComentarioTarea,
   type EntidadBitacora,
   type EntradaBitacora,
   type EstadoMovimiento,
   type EstadoTarea,
   type EventoCalendario,
   type EventoInput,
+  type MiembroEquipo,
   type MovimientoFinanciero,
   type MovimientoInput,
+  type Notificacion,
   type NuevaEntradaBitacora,
   type Perfil,
   type PerfilInput,
   type PrioridadTarea,
   type RolPerfil,
+  type Subtarea,
+  type SubtareaInput,
   type Tarea,
   type TareaInput,
   type TipoEvento,
@@ -44,12 +50,18 @@ import type { Fase2Repository } from "@/lib/repository/fase2-types";
 interface FilaTarea {
   id: string;
   empresa_id: string | null;
+  contacto_id: string | null;
   titulo: string;
   descripcion: string | null;
   estado: EstadoTarea;
   prioridad: PrioridadTarea;
+  asignado_a: string | null;
+  creado_por: string | null;
+  vence_en: string | null;
   fecha_limite: string | null;
+  progreso: number | string | null;
   fecha_completada: string | null;
+  completada_por: string | null;
   orden: number | string | null;
   responsable: string | null;
   fecha_creacion: string;
@@ -130,12 +142,18 @@ function aTarea(f: FilaTarea): Tarea {
   return {
     id: f.id,
     empresaId: f.empresa_id,
+    contactoId: f.contacto_id,
     titulo: f.titulo,
     descripcion: f.descripcion ?? "",
     estado: f.estado,
     prioridad: f.prioridad,
+    asignadoA: f.asignado_a,
+    creadoPor: f.creado_por,
+    venceEn: f.vence_en,
     fechaLimite: f.fecha_limite,
+    progreso: num(f.progreso),
     fechaCompletada: f.fecha_completada,
+    completadoPor: f.completada_por,
     orden: num(f.orden),
     responsable: f.responsable ?? "",
     fechaCreacion: f.fecha_creacion,
@@ -146,17 +164,18 @@ function aTarea(f: FilaTarea): Tarea {
 function tareaAFila(input: Partial<TareaInput>): Record<string, unknown> {
   const fila: Record<string, unknown> = {};
   if (input.empresaId !== undefined) fila.empresa_id = input.empresaId;
+  if (input.contactoId !== undefined) fila.contacto_id = input.contactoId;
   if (input.titulo !== undefined) fila.titulo = input.titulo.trim();
   if (input.descripcion !== undefined) fila.descripcion = input.descripcion;
   if (input.prioridad !== undefined) fila.prioridad = input.prioridad;
+  if (input.asignadoA !== undefined) fila.asignado_a = input.asignadoA;
+  if (input.venceEn !== undefined) fila.vence_en = input.venceEn;
   if (input.fechaLimite !== undefined) fila.fecha_limite = input.fechaLimite;
+  if (input.progreso !== undefined) fila.progreso = input.progreso;
   if (input.orden !== undefined) fila.orden = input.orden;
   if (input.responsable !== undefined) fila.responsable = input.responsable;
-  if (input.estado !== undefined) {
-    fila.estado = input.estado;
-    fila.fecha_completada =
-      input.estado === "hecha" ? new Date().toISOString() : null;
-  }
+  // La conclusión (fecha_completada / completada_por) la fija un trigger.
+  if (input.estado !== undefined) fila.estado = input.estado;
   return fila;
 }
 
@@ -305,6 +324,230 @@ class Fase2SupabaseRepository implements Fase2Repository {
       .from(SUPABASE_TABLE_TAREAS)
       .delete()
       .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  // Subtareas
+
+  async listSubtareas(): Promise<Subtarea[]> {
+    const { data, error } = await this.sb
+      .from("subtareas")
+      .select("*")
+      .order("orden", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data as Array<Record<string, unknown>>).map((f) => ({
+      id: f.id as string,
+      tareaId: f.tarea_id as string,
+      titulo: f.titulo as string,
+      completada: Boolean(f.completada),
+      completadaEn: (f.completada_en as string | null) ?? null,
+      completadaPor: (f.completada_por as string | null) ?? null,
+      orden: num(f.orden as number | string | null),
+      fechaCreacion: f.fecha_creacion as string,
+    }));
+  }
+
+  async crearSubtarea(
+    tareaId: string,
+    input: SubtareaInput,
+  ): Promise<Subtarea> {
+    const { data, error } = await this.sb
+      .from("subtareas")
+      .insert({
+        tarea_id: tareaId,
+        titulo: input.titulo.trim(),
+        orden: input.orden,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    const f = data as Record<string, unknown>;
+    return {
+      id: f.id as string,
+      tareaId: f.tarea_id as string,
+      titulo: f.titulo as string,
+      completada: Boolean(f.completada),
+      completadaEn: (f.completada_en as string | null) ?? null,
+      completadaPor: (f.completada_por as string | null) ?? null,
+      orden: num(f.orden as number | string | null),
+      fechaCreacion: f.fecha_creacion as string,
+    };
+  }
+
+  async actualizarSubtarea(
+    id: string,
+    cambios: Partial<{ titulo: string; completada: boolean; orden: number }>,
+  ): Promise<Subtarea> {
+    const fila: Record<string, unknown> = {};
+    if (cambios.titulo !== undefined) fila.titulo = cambios.titulo.trim();
+    if (cambios.orden !== undefined) fila.orden = cambios.orden;
+    if (cambios.completada !== undefined) {
+      fila.completada = cambios.completada;
+      fila.completada_en = cambios.completada ? new Date().toISOString() : null;
+      const u = await getUsuarioActual();
+      fila.completada_por = cambios.completada ? (u?.id ?? null) : null;
+    }
+    const { data, error } = await this.sb
+      .from("subtareas")
+      .update(fila)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    const f = data as Record<string, unknown>;
+    return {
+      id: f.id as string,
+      tareaId: f.tarea_id as string,
+      titulo: f.titulo as string,
+      completada: Boolean(f.completada),
+      completadaEn: (f.completada_en as string | null) ?? null,
+      completadaPor: (f.completada_por as string | null) ?? null,
+      orden: num(f.orden as number | string | null),
+      fechaCreacion: f.fecha_creacion as string,
+    };
+  }
+
+  async eliminarSubtarea(id: string): Promise<void> {
+    const { error } = await this.sb.from("subtareas").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  // Comentarios de tareas
+
+  async listComentarios(): Promise<ComentarioTarea[]> {
+    const { data, error } = await this.sb
+      .from("comentarios_tarea")
+      .select("id, tarea_id, autor_id, contenido, fecha_creacion, fecha_actualizacion")
+      .order("fecha_creacion", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data as Array<Record<string, unknown>>).map((f) => ({
+      id: f.id as string,
+      tareaId: f.tarea_id as string,
+      autorId: f.autor_id as string,
+      contenido: f.contenido as string,
+      fechaCreacion: f.fecha_creacion as string,
+      fechaActualizacion: f.fecha_actualizacion as string,
+    }));
+  }
+
+  async crearComentario(
+    tareaId: string,
+    contenido: string,
+  ): Promise<ComentarioTarea> {
+    const { data, error } = await this.sb
+      .from("comentarios_tarea")
+      .insert({ tarea_id: tareaId, contenido: contenido.trim() })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    const f = data as Record<string, unknown>;
+    return {
+      id: f.id as string,
+      tareaId: f.tarea_id as string,
+      autorId: f.autor_id as string,
+      contenido: f.contenido as string,
+      fechaCreacion: f.fecha_creacion as string,
+      fechaActualizacion: f.fecha_actualizacion as string,
+    };
+  }
+
+  async eliminarComentario(id: string): Promise<void> {
+    const { error } = await this.sb
+      .from("comentarios_tarea")
+      .delete()
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  // Actividad de tareas
+
+  async listActividadTarea(): Promise<ActividadTarea[]> {
+    const { data, error } = await this.sb
+      .from("actividad_tarea")
+      .select("id, tarea_id, actor_id, accion, valores_previos, valores_nuevos, fecha_creacion")
+      .order("fecha_creacion", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return (data as Array<Record<string, unknown>>).map((f) => ({
+      id: f.id as string,
+      tareaId: (f.tarea_id as string | null) ?? null,
+      actorId: (f.actor_id as string | null) ?? null,
+      accion: f.accion as string,
+      valoresPrevios:
+        (f.valores_previos as Record<string, unknown> | null) ?? null,
+      valoresNuevos:
+        (f.valores_nuevos as Record<string, unknown> | null) ?? null,
+      fechaCreacion: f.fecha_creacion as string,
+    }));
+  }
+
+  // Notificaciones
+
+  async listNotificaciones(): Promise<Notificacion[]> {
+    const { data, error } = await this.sb
+      .from("notificaciones")
+      .select("id, tipo, titulo, mensaje, tarea_id, leida_en, fecha_creacion")
+      .order("fecha_creacion", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return (data as Array<Record<string, unknown>>).map((f) => ({
+      id: f.id as string,
+      tipo: f.tipo as string,
+      titulo: f.titulo as string,
+      mensaje: (f.mensaje as string | null) ?? "",
+      tareaId: (f.tarea_id as string | null) ?? null,
+      leidaEn: (f.leida_en as string | null) ?? null,
+      fechaCreacion: f.fecha_creacion as string,
+    }));
+  }
+
+  async marcarNotificacion(id: string, leida: boolean): Promise<void> {
+    const { error } = await this.sb
+      .from("notificaciones")
+      .update({ leida_en: leida ? new Date().toISOString() : null })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  async marcarTodasNotificaciones(): Promise<void> {
+    const { error } = await this.sb
+      .from("notificaciones")
+      .update({ leida_en: new Date().toISOString() })
+      .is("leida_en", null);
+    if (error) throw new Error(error.message);
+  }
+
+  // Equipo
+
+  async listMiembrosEquipo(): Promise<MiembroEquipo[]> {
+    const [miembros, perfiles] = await Promise.all([
+      this.sb
+        .from("miembros_organizacion")
+        .select("user_id, correo, rol")
+        .order("fecha_creacion", { ascending: true }),
+      this.sb.from(SUPABASE_TABLE_PERFILES).select("user_id, nombre"),
+    ]);
+    if (miembros.error) throw new Error(miembros.error.message);
+    const nombres = new Map<string, string>();
+    for (const p of (perfiles.data ?? []) as Array<Record<string, unknown>>) {
+      nombres.set(p.user_id as string, (p.nombre as string | null) ?? "");
+    }
+    return (miembros.data as Array<Record<string, unknown>>).map((m) => ({
+      userId: m.user_id as string,
+      correo: (m.correo as string | null) ?? "",
+      rol: (m.rol as RolPerfil) ?? "miembro",
+      nombre:
+        (nombres.get(m.user_id as string) || "").trim() ||
+        ((m.correo as string | null) ?? "").split("@")[0] ||
+        "Usuario",
+    }));
+  }
+
+  async notificarMencion(tareaId: string, userId: string): Promise<void> {
+    const { error } = await this.sb.rpc("notificar_mencion", {
+      p_tarea: tareaId,
+      p_user: userId,
+    });
     if (error) throw new Error(error.message);
   }
 

@@ -28,6 +28,7 @@ import {
   type EstadoTarea,
   type EventoCalendario,
   type EventoInput,
+  type MiembroEquipo,
   type MovimientoFinanciero,
   type MovimientoInput,
   type NuevaEntradaBitacora,
@@ -91,6 +92,9 @@ interface Fase2ContextValor {
   ) => Promise<EventoCalendario | null>;
   eliminarEvento: (id: string) => Promise<void>;
 
+  // Equipo (para selector de responsables y página Equipo)
+  miembrosEquipo: MiembroEquipo[];
+
   // Configuración
   perfil: Perfil | null;
   guardarPerfil: (input: PerfilInput) => Promise<Perfil | null>;
@@ -124,6 +128,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
   const [ajustes, setAjustes] = useState<AjustesApp>(AJUSTES_PREDETERMINADOS);
   const [bitacora, setBitacora] = useState<EntradaBitacora[]>([]);
   const [estados, setEstados] = useState<EstadoOportunidad[]>([]);
+  const [miembrosEquipo, setMiembrosEquipo] = useState<MiembroEquipo[]>([]);
   const [cargando, setCargando] = useState(true);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +144,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     setCargando(true);
     setError(null);
     try {
-      const [t, c, m, ev, p, aj, bit, est] = await Promise.all([
+      const [t, c, m, ev, p, aj, bit, est, eq] = await Promise.all([
         repo.listTareas(),
         repo.listCategorias(),
         repo.listMovimientos(),
@@ -148,6 +153,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         repo.obtenerAjustes(),
         repo.listBitacora(200),
         repo.listEstados(),
+        repo.listMiembrosEquipo().catch(() => []),
       ]);
       if (!montado.current) return;
       setTareas(t);
@@ -157,6 +163,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
       setAjustes(aj);
       setBitacora(bit);
       setEstados(est);
+      setMiembrosEquipo(eq);
 
       // Si no hay perfil todavía, se crea uno mínimo con el correo de la sesión.
       if (p) {
@@ -285,7 +292,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
                 estado,
                 orden,
                 fechaCompletada:
-                  estado === "hecha"
+                  estado === "completada"
                     ? (t.fechaCompletada ?? new Date().toISOString())
                     : null,
               }
@@ -293,7 +300,8 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
         ),
       );
       try {
-        await repo.actualizarTarea(id, { estado, orden });
+        const t = await repo.actualizarTarea(id, { estado, orden });
+        setTareas((prev) => prev.map((x) => (x.id === id ? t : x)));
       } catch (e) {
         setTareas(previo);
         toast.error("No se pudo mover la tarea", {
@@ -626,6 +634,7 @@ export function Fase2Provider({ children }: { children: React.ReactNode }) {
     crearEvento,
     actualizarEvento,
     eliminarEvento,
+    miembrosEquipo,
     perfil,
     guardarPerfil,
     ajustes,

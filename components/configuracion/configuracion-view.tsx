@@ -186,11 +186,15 @@ export function ConfiguracionView() {
         try {
           await rf.crearTarea({
             empresaId: t.empresaId ? (mapEmp.get(t.empresaId) ?? null) : null,
+            contactoId: null,
             titulo: t.titulo,
             descripcion: t.descripcion,
             estado: t.estado,
             prioridad: t.prioridad,
+            asignadoA: t.asignadoA ?? null,
+            venceEn: t.venceEn ?? null,
             fechaLimite: t.fechaLimite,
+            progreso: t.progreso ?? 0,
             orden: t.orden,
             responsable: t.responsable,
           });
@@ -971,8 +975,8 @@ function SeccionNotificaciones({
     }
     for (const t of tareas) {
       if (
-        t.estado !== "hecha" &&
-        (tareaVencida(t, hoy) || dentroDe(t.fechaLimite, tar))
+        t.estado !== "completada" &&
+        (tareaVencida(t) || dentroDe(t.fechaLimite, tar))
       ) {
         avisos.push(`Tarea: ${t.titulo}`);
       }

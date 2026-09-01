@@ -180,7 +180,7 @@ export function construirItems({
   }
 
   for (const t of tareas) {
-    if (t.estado === "hecha" || !t.fechaLimite) continue;
+    if (t.estado === "completada" || !t.fechaLimite) continue;
     items.push({
       id: `tarea:${t.id}`,
       origenId: t.id,

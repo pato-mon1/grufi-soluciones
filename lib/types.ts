@@ -115,16 +115,23 @@ export function esTipoActividadValido(valor: unknown): valor is TipoActividad {
 }
 
 // ────────────────────────────────────────────────────────────
-// FASE 2 — Tareas (tablero Kanban de 4 columnas)
+// Tareas colaborativas (tablero Kanban de 4 columnas)
 // ────────────────────────────────────────────────────────────
 
 export const ESTADOS_TAREA = [
-  "pendiente",
-  "en_progreso",
-  "en_espera",
-  "hecha",
+  "por_hacer",
+  "en_curso",
+  "en_revision",
+  "completada",
 ] as const;
 export type EstadoTarea = (typeof ESTADOS_TAREA)[number];
+
+export const ETIQUETA_ESTADO_TAREA: Record<EstadoTarea, string> = {
+  por_hacer: "Por hacer",
+  en_curso: "En curso",
+  en_revision: "En revisión",
+  completada: "Completada",
+};
 
 export const PRIORIDADES_TAREA = ["baja", "media", "alta"] as const;
 export type PrioridadTarea = (typeof PRIORIDADES_TAREA)[number];
@@ -133,16 +140,29 @@ export interface Tarea {
   id: string;
   /** Empresa relacionada (opcional). */
   empresaId: string | null;
+  /** Contacto relacionado (opcional). */
+  contactoId: string | null;
   titulo: string;
   descripcion: string;
   estado: EstadoTarea;
   prioridad: PrioridadTarea;
-  /** Fecha límite (YYYY-MM-DD) o `null`. */
+  /** Responsable (id de usuario) o `null`. */
+  asignadoA: string | null;
+  /** Quién creó la tarea (id de usuario). */
+  creadoPor: string | null;
+  /** Vencimiento con hora (ISO) o `null`. */
+  venceEn: string | null;
+  /** Fecha límite (YYYY-MM-DD) derivada de `venceEn`, para el Calendario. */
   fechaLimite: string | null;
-  /** ISO en que se marcó como hecha, o `null`. */
+  /** 0–100. */
+  progreso: number;
+  /** ISO en que se completó, o `null`. */
   fechaCompletada: string | null;
+  /** Quién la completó (id de usuario) o `null`. */
+  completadoPor: string | null;
   /** Posición dentro de su columna (menor = más arriba). */
   orden: number;
+  /** Nombre del responsable como texto (compatibilidad / modo local). */
   responsable: string;
   fechaCreacion: string;
   fechaActualizacion: string;
@@ -150,7 +170,12 @@ export interface Tarea {
 
 export type TareaInput = Omit<
   Tarea,
-  "id" | "fechaCreacion" | "fechaActualizacion" | "fechaCompletada"
+  | "id"
+  | "fechaCreacion"
+  | "fechaActualizacion"
+  | "fechaCompletada"
+  | "completadoPor"
+  | "creadoPor"
 >;
 
 export function esEstadoTareaValido(valor: unknown): valor is EstadoTarea {
@@ -158,6 +183,56 @@ export function esEstadoTareaValido(valor: unknown): valor is EstadoTarea {
     typeof valor === "string" &&
     (ESTADOS_TAREA as readonly string[]).includes(valor)
   );
+}
+
+export interface Subtarea {
+  id: string;
+  tareaId: string;
+  titulo: string;
+  completada: boolean;
+  completadaEn: string | null;
+  completadaPor: string | null;
+  orden: number;
+  fechaCreacion: string;
+}
+
+export type SubtareaInput = Pick<Subtarea, "titulo" | "orden">;
+
+export interface ComentarioTarea {
+  id: string;
+  tareaId: string;
+  autorId: string;
+  contenido: string;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+}
+
+export interface ActividadTarea {
+  id: string;
+  tareaId: string | null;
+  actorId: string | null;
+  accion: string;
+  valoresPrevios: Record<string, unknown> | null;
+  valoresNuevos: Record<string, unknown> | null;
+  fechaCreacion: string;
+}
+
+export interface Notificacion {
+  id: string;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  tareaId: string | null;
+  leidaEn: string | null;
+  fechaCreacion: string;
+}
+
+/** Miembro del equipo (para el selector de responsables y la página Equipo). */
+export interface MiembroEquipo {
+  userId: string;
+  nombre: string;
+  correo: string;
+  rol: RolPerfil;
 }
 
 // ────────────────────────────────────────────────────────────

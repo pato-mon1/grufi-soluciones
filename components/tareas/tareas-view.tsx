@@ -34,7 +34,7 @@ import { PageHeader } from "@/components/app-shell/page-header";
 import { Field } from "@/components/empresas/field";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
-import { formatearFecha, hoyISO } from "@/lib/date";
+import { formatearFecha } from "@/lib/date";
 import {
   COLUMNAS_TAREA,
   ETIQUETA_PRIORIDAD,
@@ -59,11 +59,15 @@ const PRIORIDAD_CLASE: Record<PrioridadTarea, string> = {
 
 const TAREA_VACIA: TareaInput = {
   empresaId: null,
+  contactoId: null,
   titulo: "",
   descripcion: "",
-  estado: "pendiente",
+  estado: "por_hacer",
   prioridad: "media",
+  asignadoA: null,
+  venceEn: null,
   fechaLimite: null,
+  progreso: 0,
   orden: 0,
   responsable: "",
 };
@@ -80,16 +84,15 @@ export function TareasView() {
     eliminarTarea,
   } = useFase2();
 
-  const hoy = hoyISO();
   const [formAbierto, setFormAbierto] = useState(false);
   const [enEdicion, setEnEdicion] = useState<Tarea | null>(null);
-  const [estadoNueva, setEstadoNueva] = useState<EstadoTarea>("pendiente");
+  const [estadoNueva, setEstadoNueva] = useState<EstadoTarea>("por_hacer");
   const [aEliminar, setAEliminar] = useState<Tarea | null>(null);
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [columnaActiva, setColumnaActiva] = useState<EstadoTarea | null>(null);
 
   const grupos = useMemo(() => agruparPorEstado(tareas), [tareas]);
-  const resumen = useMemo(() => resumirTareas(tareas, hoy), [tareas, hoy]);
+  const resumen = useMemo(() => resumirTareas(tareas), [tareas]);
 
   const nombreEmpresa = useMemo(() => {
     const mapa = new Map<string, string>();
@@ -115,8 +118,8 @@ export function TareasView() {
 
   const indicadores = [
     { etiqueta: "Total", valor: resumen.total, icono: ListChecks },
-    { etiqueta: "En progreso", valor: resumen.enProgreso, icono: ListChecks },
-    { etiqueta: "Hechas", valor: resumen.hechas, icono: ListChecks },
+    { etiqueta: "En curso", valor: resumen.enCurso, icono: ListChecks },
+    { etiqueta: "Completadas", valor: resumen.completadas, icono: ListChecks },
     {
       etiqueta: "Vencidas",
       valor: resumen.vencidas,
@@ -133,7 +136,7 @@ export function TareasView() {
         action={
           <Button
             className="w-full sm:w-auto"
-            onClick={() => abrirNueva("pendiente")}
+            onClick={() => abrirNueva("por_hacer")}
           >
             <Plus className="h-4 w-4 text-champagne" />
             Nueva tarea
@@ -219,7 +222,7 @@ export function TareasView() {
                           ? (nombreEmpresa.get(tarea.empresaId) ?? null)
                           : null
                       }
-                      vencida={tareaVencida(tarea, hoy)}
+                      vencida={tareaVencida(tarea)}
                       onDragStart={() => setArrastrando(tarea.id)}
                       onDragEnd={() => {
                         setArrastrando(null);
@@ -451,11 +454,15 @@ function TareaFormDialog({
     if (tarea) {
       setDatos({
         empresaId: tarea.empresaId,
+        contactoId: tarea.contactoId,
         titulo: tarea.titulo,
         descripcion: tarea.descripcion,
         estado: tarea.estado,
         prioridad: tarea.prioridad,
+        asignadoA: tarea.asignadoA,
+        venceEn: tarea.venceEn,
         fechaLimite: tarea.fechaLimite,
+        progreso: tarea.progreso,
         orden: tarea.orden,
         responsable: tarea.responsable,
       });

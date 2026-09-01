@@ -104,8 +104,8 @@ export function FichaEmpresa({ id }: { id: string }) {
       tareas
         .filter((t) => t.empresaId === id)
         .sort((a, b) => {
-          const ah = a.estado === "hecha" ? 1 : 0;
-          const bh = b.estado === "hecha" ? 1 : 0;
+          const ah = a.estado === "completada" ? 1 : 0;
+          const bh = b.estado === "completada" ? 1 : 0;
           if (ah !== bh) return ah - bh;
           return a.orden - b.orden;
         }),
@@ -183,12 +183,16 @@ export function FichaEmpresa({ id }: { id: string }) {
     if (!empresa || !nuevaPrep.trim()) return;
     await crearTarea({
       empresaId: empresa.id,
+      contactoId: null,
       titulo: nuevaPrep.trim(),
       descripcion: "",
-      estado: "pendiente",
+      estado: "por_hacer",
       prioridad: "media",
+      asignadoA: null,
+      venceEn: null,
       fechaLimite: empresa.fechaProximoSeguimiento,
-      orden: siguienteOrden(tareas, "pendiente"),
+      progreso: 0,
+      orden: siguienteOrden(tareas, "por_hacer"),
       responsable: "",
     });
     setNuevaPrep("");
@@ -340,7 +344,7 @@ export function FichaEmpresa({ id }: { id: string }) {
                 </li>
               )}
               {pendientes.map((t) => {
-                const hecha = t.estado === "hecha";
+                const hecha = t.estado === "completada";
                 return (
                   <li
                     key={t.id}
@@ -351,7 +355,7 @@ export function FichaEmpresa({ id }: { id: string }) {
                       aria-label={hecha ? "Marcar como pendiente" : "Marcar como hecha"}
                       onClick={() =>
                         void actualizarTarea(t.id, {
-                          estado: hecha ? "pendiente" : "hecha",
+                          estado: hecha ? "por_hacer" : "completada",
                         })
                       }
                       className={cn(

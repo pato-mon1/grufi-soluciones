@@ -114,6 +114,10 @@ export const STORAGE_KEY_PERFIL = "seguimiento-perfil:v1";
 export const STORAGE_KEY_AJUSTES = "seguimiento-ajustes:v1";
 export const STORAGE_KEY_BITACORA = "seguimiento-bitacora:v1";
 export const STORAGE_KEY_ESTADOS = "seguimiento-estados-oportunidad:v1";
+export const STORAGE_KEY_SUBTAREAS = "seguimiento-subtareas:v1";
+export const STORAGE_KEY_COMENTARIOS_TAREA = "seguimiento-comentarios-tarea:v1";
+export const STORAGE_KEY_ACTIVIDAD_TAREA = "seguimiento-actividad-tarea:v1";
+export const STORAGE_KEY_NOTIFICACIONES = "seguimiento-notificaciones:v1";
 
 /** Icono (lucide) y tono para cada tipo de actividad del historial. */
 export const ACTIVIDAD_CONFIG: Record<

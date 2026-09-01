@@ -1,12 +1,17 @@
 import { hoyISO } from "@/lib/date";
-import type { EstadoTarea, PrioridadTarea, Tarea } from "@/lib/types";
+import {
+  ETIQUETA_ESTADO_TAREA,
+  type EstadoTarea,
+  type PrioridadTarea,
+  type Tarea,
+} from "@/lib/types";
 
 /** Columnas del tablero Kanban, en orden. */
 export const COLUMNAS_TAREA: { estado: EstadoTarea; etiqueta: string }[] = [
-  { estado: "pendiente", etiqueta: "Pendiente" },
-  { estado: "en_progreso", etiqueta: "En progreso" },
-  { estado: "en_espera", etiqueta: "En espera" },
-  { estado: "hecha", etiqueta: "Hecha" },
+  { estado: "por_hacer", etiqueta: ETIQUETA_ESTADO_TAREA.por_hacer },
+  { estado: "en_curso", etiqueta: ETIQUETA_ESTADO_TAREA.en_curso },
+  { estado: "en_revision", etiqueta: ETIQUETA_ESTADO_TAREA.en_revision },
+  { estado: "completada", etiqueta: ETIQUETA_ESTADO_TAREA.completada },
 ];
 
 export const ETIQUETA_PRIORIDAD: Record<PrioridadTarea, string> = {
@@ -15,7 +20,13 @@ export const ETIQUETA_PRIORIDAD: Record<PrioridadTarea, string> = {
   baja: "Baja",
 };
 
-/** Orden de una tarea dentro de su columna (menor primero, luego más recientes). */
+/** Momento de vencimiento (ISO) de una tarea: `venceEn` o la fecha límite. */
+export function vencimientoISO(tarea: Tarea): string | null {
+  if (tarea.venceEn) return tarea.venceEn;
+  if (tarea.fechaLimite) return `${tarea.fechaLimite}T23:59:59`;
+  return null;
+}
+
 function compararTareas(a: Tarea, b: Tarea): number {
   if (a.orden !== b.orden) return a.orden - b.orden;
   return b.fechaCreacion.localeCompare(a.fechaCreacion);
@@ -26,10 +37,10 @@ export function agruparPorEstado(
   tareas: Tarea[],
 ): Record<EstadoTarea, Tarea[]> {
   const grupos: Record<EstadoTarea, Tarea[]> = {
-    pendiente: [],
-    en_progreso: [],
-    en_espera: [],
-    hecha: [],
+    por_hacer: [],
+    en_curso: [],
+    en_revision: [],
+    completada: [],
   };
   for (const t of tareas) grupos[t.estado].push(t);
   for (const estado of Object.keys(grupos) as EstadoTarea[]) {
@@ -38,41 +49,66 @@ export function agruparPorEstado(
   return grupos;
 }
 
-/** Una tarea está vencida si tiene fecha límite pasada y no está hecha. */
-export function tareaVencida(tarea: Tarea, hoy: string = hoyISO()): boolean {
-  if (tarea.estado === "hecha" || !tarea.fechaLimite) return false;
-  return tarea.fechaLimite < hoy;
+/** Una tarea está vencida si su vencimiento ya pasó y no está completada. */
+export function tareaVencida(tarea: Tarea, ahora: Date = new Date()): boolean {
+  if (tarea.estado === "completada") return false;
+  const v = vencimientoISO(tarea);
+  if (!v) return false;
+  return new Date(v).getTime() < ahora.getTime();
 }
 
-/** Una tarea vence hoy si su fecha límite es hoy y no está hecha. */
+/** Una tarea vence hoy si su fecha límite es hoy y no está completada. */
 export function tareaParaHoy(tarea: Tarea, hoy: string = hoyISO()): boolean {
-  return tarea.estado !== "hecha" && tarea.fechaLimite === hoy;
+  return tarea.estado !== "completada" && tarea.fechaLimite === hoy;
+}
+
+/** ¿La tarea se completó dentro de los últimos 7 días? */
+export function completadaEstaSemana(
+  tarea: Tarea,
+  ahora: Date = new Date(),
+): boolean {
+  if (tarea.estado !== "completada" || !tarea.fechaCompletada) return false;
+  const diff = ahora.getTime() - new Date(tarea.fechaCompletada).getTime();
+  return diff >= 0 && diff <= 7 * 86_400_000;
 }
 
 export interface ResumenTareas {
   total: number;
+  porHacer: number;
+  enCurso: number;
+  enRevision: number;
+  completadas: number;
   pendientes: number;
-  enProgreso: number;
-  hechas: number;
   vencidas: number;
+  paraHoy: number;
+  completadasSemana: number;
 }
 
 export function resumirTareas(
   tareas: Tarea[],
-  hoy: string = hoyISO(),
+  ahora: Date = new Date(),
 ): ResumenTareas {
+  const hoy = ahora.toISOString().slice(0, 10);
   const r: ResumenTareas = {
     total: tareas.length,
+    porHacer: 0,
+    enCurso: 0,
+    enRevision: 0,
+    completadas: 0,
     pendientes: 0,
-    enProgreso: 0,
-    hechas: 0,
     vencidas: 0,
+    paraHoy: 0,
+    completadasSemana: 0,
   };
   for (const t of tareas) {
-    if (t.estado === "pendiente" || t.estado === "en_espera") r.pendientes += 1;
-    if (t.estado === "en_progreso") r.enProgreso += 1;
-    if (t.estado === "hecha") r.hechas += 1;
-    if (tareaVencida(t, hoy)) r.vencidas += 1;
+    if (t.estado === "por_hacer") r.porHacer += 1;
+    if (t.estado === "en_curso") r.enCurso += 1;
+    if (t.estado === "en_revision") r.enRevision += 1;
+    if (t.estado === "completada") r.completadas += 1;
+    if (t.estado !== "completada") r.pendientes += 1;
+    if (tareaVencida(t, ahora)) r.vencidas += 1;
+    if (tareaParaHoy(t, hoy)) r.paraHoy += 1;
+    if (completadaEstaSemana(t, ahora)) r.completadasSemana += 1;
   }
   return r;
 }
@@ -85,4 +121,20 @@ export function siguienteOrden(
   const enColumna = tareas.filter((t) => t.estado === estado);
   if (enColumna.length === 0) return 0;
   return Math.max(...enColumna.map((t) => t.orden)) + 1;
+}
+
+/** Avance implícito según el estado (para mostrar cuando progreso = 0). */
+export function progresoDeEstado(estado: EstadoTarea): number {
+  switch (estado) {
+    case "por_hacer":
+      return 0;
+    case "en_curso":
+      return 40;
+    case "en_revision":
+      return 80;
+    case "completada":
+      return 100;
+    default:
+      return 0;
+  }
 }

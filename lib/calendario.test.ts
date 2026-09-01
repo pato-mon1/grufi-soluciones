@@ -96,7 +96,7 @@ describe("construirItems", () => {
         crearTarea({
           id: "t2",
           titulo: "Hecha",
-          estado: "hecha",
+          estado: "completada",
           fechaLimite: "2026-06-17",
         }),
         crearTarea({ id: "t3", titulo: "Sin fecha" }),
