@@ -30,6 +30,9 @@ import { formatearFecha, hoyISO } from "@/lib/date";
 import { siguienteOrden } from "@/lib/tareas";
 import type { TipoActividad } from "@/lib/types";
 
+/** Tope superior de los selectores de fecha (permite proyectar a futuro). */
+const FECHA_MAXIMA = "2035-12-31";
+
 const TIPOS_JUNTA: { valor: TipoActividad; etiqueta: string }[] = [
   { valor: "Junta", etiqueta: "Junta" },
   { valor: "Llamada", etiqueta: "Llamada" },
@@ -251,7 +254,7 @@ export function FichaEmpresa({ id }: { id: string }) {
               <Input
                 type="date"
                 value={fechaJunta}
-                max={hoyISO()}
+                max={FECHA_MAXIMA}
                 onChange={(e) => setFechaJunta(e.target.value || hoyISO())}
                 className="h-7 w-auto text-xs"
                 aria-label="Fecha de la junta"
@@ -270,6 +273,7 @@ export function FichaEmpresa({ id }: { id: string }) {
                   type="date"
                   value={proxima}
                   min={hoyISO()}
+                  max={FECHA_MAXIMA}
                   onChange={(e) => setProxima(e.target.value)}
                   className="mt-1 h-8 w-40"
                 />
