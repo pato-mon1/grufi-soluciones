@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   moduloDeRuta,
+  MODULOS,
   plantillaDeRol,
   PLANTILLAS,
   primeraRutaPermitida,
@@ -130,6 +131,41 @@ describe("ejemplo Cano (spec)", () => {
 
   it("su primer panel permitido es Empresas", () => {
     expect(primeraRutaPermitida(cano)).toBe("/empresas");
+  });
+});
+
+describe("módulo asistente (Asistente GRUFI)", () => {
+  it("está registrado como panel y ruta", () => {
+    expect((MODULOS as readonly string[]).includes("asistente")).toBe(true);
+    expect(moduloDeRuta("/asistente")).toBe("asistente");
+    expect(moduloDeRuta("/asistente/xyz")).toBe("asistente");
+  });
+
+  it("las plantillas incluyen un nivel para el asistente", () => {
+    expect(PLANTILLAS.admin.asistente).toBe("manage");
+    expect(PLANTILLAS.ventas.asistente).toBe("edit");
+    expect(PLANTILLAS.colaborador.asistente).toBe("view");
+    expect(PLANTILLAS.personalizado.asistente).toBe("none");
+  });
+
+  it("un colaborador sin regla de asistente no tiene acceso", () => {
+    const p = resolverPermisos(
+      [{ module_key: "tareas", access_level: "edit" }],
+      false,
+    );
+    expect(tieneAcceso(p.asistente, "view")).toBe(false);
+  });
+
+  it("un colaborador con regla view sí tiene acceso", () => {
+    const p = resolverPermisos(
+      [
+        { module_key: "tareas", access_level: "edit" },
+        { module_key: "asistente", access_level: "view" },
+      ],
+      false,
+    );
+    expect(tieneAcceso(p.asistente, "view")).toBe(true);
+    expect(tieneAcceso(p.asistente, "edit")).toBe(false);
   });
 });
 

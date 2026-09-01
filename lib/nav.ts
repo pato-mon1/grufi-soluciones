@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ListChecks,
   Settings,
+  Sparkles,
   Users,
   Wallet,
   type LucideIcon,
@@ -27,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/finanzas", label: "Finanzas", icon: Wallet },
   { href: "/contactos", label: "Contactos", icon: Users },
+  { href: "/asistente", label: "Asistente GRUFI", icon: Sparkles },
   {
     href: "/configuracion",
     label: "Configuración",

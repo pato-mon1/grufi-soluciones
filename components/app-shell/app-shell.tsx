@@ -19,6 +19,7 @@ import { usePermisos } from "@/lib/hooks/use-permisos";
 import { moduloDeRuta } from "@/lib/permisos";
 import { CampanaNotificaciones } from "@/components/app-shell/campana-notificaciones";
 import { GuardModulo } from "@/components/app-shell/guard-modulo";
+import { BotonFlotanteAsistente } from "@/components/asistente/boton-flotante";
 import {
   Sheet,
   SheetContent,
@@ -249,6 +250,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <GuardModulo>{children}</GuardModulo>
         </main>
       </div>
+
+      <BotonFlotanteAsistente />
     </div>
   );
 }

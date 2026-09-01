@@ -13,6 +13,7 @@ export const MODULOS = [
   "finanzas",
   "contactos",
   "configuracion",
+  "asistente",
 ] as const;
 export type ModuleKey = (typeof MODULOS)[number];
 
@@ -35,6 +36,7 @@ export const MODULO_LABEL: Record<ModuleKey, string> = {
   finanzas: "Finanzas",
   contactos: "Contactos",
   configuracion: "Configuración",
+  asistente: "Asistente GRUFI",
 };
 
 export const NIVEL_LABEL: Record<AccessLevel, string> = {
@@ -61,6 +63,7 @@ export const RUTA_MODULO: Record<ModuleKey, string> = {
   finanzas: "/finanzas",
   contactos: "/contactos",
   configuracion: "/configuracion",
+  asistente: "/asistente",
 };
 
 /** Módulo al que pertenece una ruta interna, o `null` si no aplica guarda. */
@@ -160,6 +163,7 @@ export const PLANTILLAS: Record<PlantillaKey, MapaPermisos> = {
     reportes: "none",
     finanzas: "none",
     configuracion: "none",
+    asistente: "edit",
   },
   finanzas: {
     finanzas: "manage",
@@ -170,6 +174,7 @@ export const PLANTILLAS: Record<PlantillaKey, MapaPermisos> = {
     calendario: "none",
     contactos: "none",
     configuracion: "none",
+    asistente: "edit",
   },
   colaborador: {
     tareas: "edit",
@@ -180,6 +185,7 @@ export const PLANTILLAS: Record<PlantillaKey, MapaPermisos> = {
     finanzas: "none",
     contactos: "none",
     configuracion: "none",
+    asistente: "view",
   },
   personalizado: todos("none"),
 };
