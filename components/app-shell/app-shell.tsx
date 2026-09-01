@@ -15,7 +15,10 @@ import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
 import { useEmpresas } from "@/lib/hooks/use-empresas";
 import { useFase2 } from "@/lib/hooks/use-fase2";
+import { usePermisos } from "@/lib/hooks/use-permisos";
+import { moduloDeRuta } from "@/lib/permisos";
 import { CampanaNotificaciones } from "@/components/app-shell/campana-notificaciones";
+import { GuardModulo } from "@/components/app-shell/guard-modulo";
 import {
   Sheet,
   SheetContent,
@@ -32,14 +35,18 @@ function NavLista({
   pathname,
   colapsado,
   esAdmin,
+  visible,
   onNavegar,
 }: {
   pathname: string;
   colapsado: boolean;
   esAdmin: boolean;
+  visible: (href: string) => boolean;
   onNavegar?: () => void;
 }) {
-  const items = NAV_ITEMS.filter((item) => !item.soloAdmin || esAdmin);
+  const items = NAV_ITEMS.filter(
+    (item) => (!item.soloAdmin || esAdmin) && visible(item.href),
+  );
   return (
     <nav className="flex flex-1 flex-col gap-0.5 p-2" aria-label="Navegación">
       {items.map((item) => {
@@ -152,7 +159,12 @@ function PiePanel({ colapsado }: { colapsado?: boolean }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { perfil } = useFase2();
-  const esAdmin = !perfil || perfil.rol === "admin";
+  const { esAdmin: esAdminPerm, puede } = usePermisos();
+  const esAdmin = esAdminPerm || !perfil || perfil.rol === "admin";
+  const visible = (href: string) => {
+    const m = moduloDeRuta(href);
+    return !m || puede(m, "view");
+  };
   const [colapsado, setColapsado] = useState(false);
   const [drawerAbierto, setDrawerAbierto] = useState(false);
 
@@ -186,7 +198,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </button>
         </div>
-        <NavLista pathname={pathname} colapsado={colapsado} esAdmin={esAdmin} />
+        <NavLista pathname={pathname} colapsado={colapsado} esAdmin={esAdmin} visible={visible} />
         <PiePanel colapsado={colapsado} />
       </aside>
 
@@ -201,6 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             pathname={pathname}
             colapsado={false}
             esAdmin={esAdmin}
+            visible={visible}
             onNavegar={() => setDrawerAbierto(false)}
           />
           <PiePanel />
@@ -232,7 +245,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <CampanaNotificaciones />
         </header>
 
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1">
+          <GuardModulo>{children}</GuardModulo>
+        </main>
       </div>
     </div>
   );
